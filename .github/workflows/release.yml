@@ -166,7 +166,8 @@ jobs:
           
           # Create Portable (Zip)
           mkdir -p build/portable
-          cp -R build/bin/TodoApp.app build/portable/
+          APP_PATH=$(find build/bin -maxdepth 1 -name "*.app" | head -n 1)
+          cp -R "$APP_PATH" build/portable/
           touch build/portable/portable.txt
           cd build/portable
           zip -r ../bin/TodoApp-${{ needs.create-release.outputs.version }}-darwin-universal-portable.zip *
