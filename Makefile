@@ -117,9 +117,13 @@ format-frontend: ## Format Frontend code (Prettier)
 test: test-backend test-frontend ## Run unit tests
 
 test-backend: ## Run Go unit tests
+	@mkdir -p $(FRONTEND_DIR)/dist
+	@touch $(FRONTEND_DIR)/dist/index.html
 	$(GO_CMD) test ./...
 
 test-coverage: ## Run backend tests with coverage
+	@mkdir -p $(FRONTEND_DIR)/dist
+	@touch $(FRONTEND_DIR)/dist/index.html
 	$(GO_CMD) test -v -timeout=5m -coverprofile=coverage.out -covermode=atomic ./...
 	$(GO_CMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
