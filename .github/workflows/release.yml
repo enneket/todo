@@ -179,7 +179,7 @@ jobs:
           files: |
             build/bin/*.AppImage
             build/bin/*.dmg
-            build/bin/*.exe
+            build/bin/*-installer.exe
             build/bin/*.zip
             build/bin/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
