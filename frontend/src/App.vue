@@ -20,8 +20,8 @@ const handleAddTodo = async () => {
 }
 
 const filteredTodos = computed(() => {
-  if (filter.value === 'active') return todoStore.todos.filter(t => !t.completed)
-  if (filter.value === 'completed') return todoStore.todos.filter(t => t.completed)
+  if (filter.value === 'active') return todoStore.todos.filter((t) => !t.completed)
+  if (filter.value === 'completed') return todoStore.todos.filter((t) => t.completed)
   return todoStore.todos
 })
 
@@ -39,7 +39,11 @@ const toggleLanguage = () => {
           <PhCheckCircle weight="bold" />
           {{ t('title') }}
         </h1>
-        <button @click="toggleLanguage" class="p-2 hover:bg-blue-700 rounded-full transition-colors" :title="t('language')">
+        <button
+          @click="toggleLanguage"
+          class="p-2 hover:bg-blue-700 rounded-full transition-colors"
+          :title="t('language')"
+        >
           <PhTranslate size="24" />
         </button>
       </header>
@@ -71,7 +75,11 @@ const toggleLanguage = () => {
           :key="f"
           @click="filter = f as any"
           class="flex-1 py-3 font-medium transition-colors border-b-2"
-          :class="filter === f ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          :class="
+            filter === f
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          "
         >
           {{ t(f) }}
         </button>
@@ -84,11 +92,14 @@ const toggleLanguage = () => {
           :key="todo.id"
           class="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group"
         >
-          <button @click="todoStore.toggleTodo(todo)" class="text-gray-400 hover:text-blue-600 transition-colors">
+          <button
+            @click="todoStore.toggleTodo(todo)"
+            class="text-gray-400 hover:text-blue-600 transition-colors"
+          >
             <PhCheckCircle v-if="todo.completed" weight="fill" class="text-green-500" size="24" />
             <PhCircle v-else size="24" />
           </button>
-          
+
           <span
             class="flex-1 text-lg transition-all"
             :class="{ 'line-through text-gray-400': todo.completed }"
@@ -103,7 +114,7 @@ const toggleLanguage = () => {
             <PhTrash size="20" />
           </button>
         </div>
-        
+
         <div v-if="filteredTodos.length === 0" class="p-8 text-center text-gray-400">
           No tasks found
         </div>

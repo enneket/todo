@@ -13,8 +13,8 @@ const i18n = createI18n({
   fallbackLocale: 'en',
   messages: {
     en,
-    zh
-  }
+    zh,
+  },
 })
 
 const pinia = createPinia()

@@ -1,6 +1,4 @@
 describe('Todo App', () => {
-  const API_URL = 'http://localhost:8081/api/todos'
-
   beforeEach(() => {
     // Clear todos before each test (optional, but good for isolation)
     // For now we assume a fresh start or just test the flow
