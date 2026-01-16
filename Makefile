@@ -38,9 +38,12 @@ help: ## Show this help message
 dev: ## Run the application in development mode
 	$(WAILS_CMD) dev $(BUILD_TAGS)
 
+ensure-dist: ## Ensure frontend/dist exists for Go tools
+	$(GO_CMD) run scripts/ensure_dist.go
+
 install-deps: install-backend-deps install-frontend-deps ## Install all dependencies
 
-install-backend-deps: ## Install backend dependencies
+install-backend-deps: ensure-dist ## Install backend dependencies
 	$(GO_CMD) mod download
 	$(GO_CMD) mod tidy
 
@@ -49,7 +52,7 @@ install-frontend-deps: ## Install frontend dependencies
 
 update-deps: update-backend-deps update-frontend-deps ## Update all dependencies
 
-update-backend-deps: ## Update backend dependencies
+update-backend-deps: ensure-dist ## Update backend dependencies
 	$(GO_CMD) get -u ./...
 	$(GO_CMD) mod tidy
 
@@ -88,7 +91,7 @@ check: lint test build ## Run full check (lint, test, build)
 
 lint: lint-backend lint-frontend ## Run all linters
 
-lint-backend: ## Run Go linter
+lint-backend: ensure-dist ## Run Go linter
 	$(GO_CMD) vet ./...
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run; \
@@ -116,14 +119,10 @@ format-frontend: ## Format Frontend code (Prettier)
 
 test: test-backend test-frontend ## Run unit tests
 
-test-backend: ## Run Go unit tests
-	@mkdir -p $(FRONTEND_DIR)/dist
-	@touch $(FRONTEND_DIR)/dist/index.html
+test-backend: ensure-dist ## Run Go unit tests
 	$(GO_CMD) test ./...
 
-test-coverage: ## Run backend tests with coverage
-	@mkdir -p $(FRONTEND_DIR)/dist
-	@touch $(FRONTEND_DIR)/dist/index.html
+test-coverage: ensure-dist ## Run backend tests with coverage
 	$(GO_CMD) test -v -timeout=5m -coverprofile=coverage.out -covermode=atomic ./...
 	$(GO_CMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
