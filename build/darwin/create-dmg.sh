@@ -3,8 +3,22 @@ set -e
 APP_NAME="TodoApp"
 VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' frontend/package.json 2>/dev/null | head -1 | sed 's/.*"\([^"]*\)".*/\1/' || echo "1.0.0")
 BUILD_DIR="build/bin"
+
+# Dynamically find the .app bundle to handle potential naming variations
+APP_PATH=$(find "${BUILD_DIR}" -maxdepth 1 -name "*.app" | head -n 1)
+
+if [ -z "${APP_PATH}" ]; then
+    echo "Error: App bundle not found in ${BUILD_DIR}"
+    echo "Contents of ${BUILD_DIR}:"
+    ls -la "${BUILD_DIR}"
+    exit 1
+fi
+
+# Use the found app name for DMG creation
+APP_FILENAME=$(basename "${APP_PATH}")
+APP_NAME="${APP_FILENAME%.*}"
+
 DMG_DIR="build/dmg"
-APP_PATH="${BUILD_DIR}/${APP_NAME}.app"
 DMG_NAME="${APP_NAME}-${VERSION}-darwin-universal.dmg"
 
 if [ ! -d "${APP_PATH}" ]; then
