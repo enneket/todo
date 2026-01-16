@@ -6,6 +6,8 @@ export interface Todo {
   id: number
   title: string
   completed: boolean
+  priority: 'high' | 'medium' | 'low'
+  due_date: string | null
   created_at: string
 }
 
@@ -23,18 +25,24 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  const addTodo = async (title: string) => {
+  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null) => {
     try {
-      await axios.post(API_URL, { title })
+      // If dueDate is empty string, send null
+      const dateToSend = dueDate === '' ? null : dueDate
+      await axios.post(API_URL, { title, priority, due_date: dateToSend })
       await fetchTodos()
     } catch (error) {
       console.error('Failed to add todo:', error)
     }
   }
 
-  const toggleTodo = async (todo: Todo) => {
+  const updateTodo = async (id: number, updates: Partial<Todo>) => {
     try {
-      await axios.put(`${API_URL}/${todo.id}`, { completed: !todo.completed })
+        // Ensure due_date is null if empty string
+        if (updates.due_date === '') {
+            updates.due_date = null as any
+        }
+      await axios.put(`${API_URL}/${id}`, updates)
       await fetchTodos()
     } catch (error) {
       console.error('Failed to update todo:', error)
@@ -50,5 +58,5 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  return { todos, fetchTodos, addTodo, toggleTodo, deleteTodo }
+  return { todos, fetchTodos, addTodo, updateTodo, deleteTodo }
 })

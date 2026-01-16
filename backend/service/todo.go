@@ -1,11 +1,15 @@
 package service
 
 import (
+	"time"
 	"todo/backend/db"
 )
 
-func CreateTodo(title string) (int64, error) {
-	res, err := db.DB.Exec("INSERT INTO todos (title) VALUES (?)", title)
+func CreateTodo(title, priority string, dueDate *time.Time) (int64, error) {
+	if priority == "" {
+		priority = "medium"
+	}
+	res, err := db.DB.Exec("INSERT INTO todos (title, priority, due_date) VALUES (?, ?, ?)", title, priority, dueDate)
 	if err != nil {
 		return 0, err
 	}
@@ -13,7 +17,7 @@ func CreateTodo(title string) (int64, error) {
 }
 
 func GetTodos() ([]db.Todo, error) {
-	rows, err := db.DB.Query("SELECT id, title, completed, created_at FROM todos ORDER BY created_at DESC")
+	rows, err := db.DB.Query("SELECT id, title, completed, priority, due_date, created_at FROM todos ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +26,7 @@ func GetTodos() ([]db.Todo, error) {
 	var todos []db.Todo
 	for rows.Next() {
 		var t db.Todo
-		if err := rows.Scan(&t.ID, &t.Title, &t.Completed, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Title, &t.Completed, &t.Priority, &t.DueDate, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		todos = append(todos, t)
@@ -30,8 +34,13 @@ func GetTodos() ([]db.Todo, error) {
 	return todos, nil
 }
 
-func UpdateTodo(id int, completed bool) error {
+func UpdateTodoStatus(id int, completed bool) error {
 	_, err := db.DB.Exec("UPDATE todos SET completed = ? WHERE id = ?", completed, id)
+	return err
+}
+
+func UpdateTodoDetails(id int, title, priority string, dueDate *time.Time) error {
+	_, err := db.DB.Exec("UPDATE todos SET title = ?, priority = ?, due_date = ? WHERE id = ?", title, priority, dueDate, id)
 	return err
 }
 

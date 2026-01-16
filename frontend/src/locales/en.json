@@ -5,5 +5,13 @@
   "active": "Active",
   "completed": "Completed",
   "all": "All",
-  "language": "Language"
+  "language": "Language",
+  "priority": "Priority",
+  "priority_high": "High",
+  "priority_medium": "Medium",
+  "priority_low": "Low",
+  "due_date": "Due Date",
+  "edit": "Edit",
+  "save": "Save",
+  "cancel": "Cancel"
 }

@@ -23,5 +23,14 @@ func InitDB(dbPath string) error {
 	);`
 
 	_, err = DB.Exec(createTableSQL)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Migrations: Try to add new columns if they don't exist
+	// We ignore errors here because "duplicate column name" is expected if run multiple times
+	DB.Exec(`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`)
+	DB.Exec(`ALTER TABLE todos ADD COLUMN due_date DATETIME`)
+
+	return nil
 }

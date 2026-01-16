@@ -1,13 +1,38 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTodoStore } from './stores/todo'
-import { PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate } from '@phosphor-icons/vue'
+import { useTodoStore, type Todo } from './stores/todo'
+import { PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, PhClock } from '@phosphor-icons/vue'
+import BaseSelect from './components/BaseSelect.vue'
 
 const { t, locale } = useI18n()
 const todoStore = useTodoStore()
+
+const priorityOptions = computed(() => [
+    { value: 'high', label: t('priority_high') },
+    { value: 'medium', label: t('priority_medium') },
+    { value: 'low', label: t('priority_low') }
+])
+
+const getDefaultDueDate = () => {
+  const d = new Date()
+  d.setDate(d.getDate() + 1) // Tomorrow
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset()) // Adjust for local time ISO string
+  return d.toISOString().slice(0, 16)
+}
+
 const newTodoTitle = ref('')
+const newTodoPriority = ref('medium')
+const newTodoDueDate = ref(getDefaultDueDate())
+
 const filter = ref<'all' | 'active' | 'completed'>('all')
+
+const editingTodo = ref<Todo | null>(null)
+const editForm = ref({
+  title: '',
+  priority: 'medium',
+  due_date: ''
+})
 
 onMounted(() => {
   todoStore.fetchTodos()
@@ -15,8 +40,56 @@ onMounted(() => {
 
 const handleAddTodo = async () => {
   if (!newTodoTitle.value.trim()) return
-  await todoStore.addTodo(newTodoTitle.value)
+  let dateToSend = newTodoDueDate.value ? new Date(newTodoDueDate.value).toISOString() : ''
+  
+  await todoStore.addTodo(newTodoTitle.value, newTodoPriority.value, dateToSend)
   newTodoTitle.value = ''
+  newTodoPriority.value = 'medium'
+  newTodoDueDate.value = ''
+}
+
+const startEdit = (todo: Todo) => {
+  editingTodo.value = todo
+  // Convert ISO string back to datetime-local format (YYYY-MM-DDThh:mm)
+  // Note: This simple slicing assumes local time or ignores timezone issues, 
+  // but for a simple app we might want to handle it better. 
+  // However, todo.due_date comes as UTC ISO string.
+  // datetime-local expects local time.
+  // Let's keep it simple: new Date(str).toISOString() returns UTC.
+  // To show in input, we need local ISO.
+  
+  let dateStr = ''
+  if (todo.due_date) {
+      const d = new Date(todo.due_date)
+      // Adjust to local ISO string for input
+      const offset = d.getTimezoneOffset() * 60000
+      const localISOTime = (new Date(d.getTime() - offset)).toISOString().slice(0, 16)
+      dateStr = localISOTime
+  }
+
+  editForm.value = {
+    title: todo.title,
+    priority: todo.priority || 'medium',
+    due_date: dateStr
+  }
+}
+
+const cancelEdit = () => {
+  editingTodo.value = null
+}
+
+const saveEdit = async () => {
+  if (!editingTodo.value) return
+  if (!editForm.value.title.trim()) return
+
+  let dateToSend = editForm.value.due_date ? new Date(editForm.value.due_date).toISOString() : ''
+  
+  await todoStore.updateTodo(editingTodo.value.id, {
+    title: editForm.value.title,
+    priority: editForm.value.priority as any,
+    due_date: dateToSend
+  })
+  editingTodo.value = null
 }
 
 const filteredTodos = computed(() => {
@@ -28,11 +101,25 @@ const filteredTodos = computed(() => {
 const toggleLanguage = () => {
   locale.value = locale.value === 'en' ? 'zh' : 'en'
 }
+
+const getPriorityColor = (p: string) => {
+  switch (p) {
+    case 'high': return 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400'
+    case 'medium': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400'
+    case 'low': return 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400'
+    default: return 'text-gray-600 bg-gray-100'
+  }
+}
+
+const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleString()
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-8">
-    <div class="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+    <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
       <!-- Header -->
       <header class="p-6 bg-blue-600 text-white flex justify-between items-center">
         <h1 class="text-2xl font-bold flex items-center gap-2">
@@ -49,23 +136,25 @@ const toggleLanguage = () => {
       </header>
 
       <!-- Input -->
-      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex gap-2">
-          <input
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700 space-y-4">
+        <input
             v-model="newTodoTitle"
             @keyup.enter="handleAddTodo"
             type="text"
             :placeholder="t('placeholder')"
-            class="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
-          <button
-            @click="handleAddTodo"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <PhPlus weight="bold" />
-            {{ t('add') }}
-          </button>
-        </div>
+          <div class="flex flex-wrap gap-4 items-center">
+              <BaseSelect v-model="newTodoPriority" :options="priorityOptions" />
+              <input type="datetime-local" v-model="newTodoDueDate" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px]" />
+              <button
+                @click="handleAddTodo"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ml-auto h-[42px]"
+              >
+                <PhPlus weight="bold" />
+                {{ t('add') }}
+              </button>
+          </div>
       </div>
 
       <!-- Filters -->
@@ -93,32 +182,78 @@ const toggleLanguage = () => {
           class="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group"
         >
           <button
-            @click="todoStore.toggleTodo(todo)"
+            @click="todoStore.updateTodo(todo.id, { completed: !todo.completed })"
             class="text-gray-400 hover:text-blue-600 transition-colors"
           >
             <PhCheckCircle v-if="todo.completed" weight="fill" class="text-green-500" size="24" />
             <PhCircle v-else size="24" />
           </button>
 
-          <span
-            class="flex-1 text-lg transition-all"
-            :class="{ 'line-through text-gray-400': todo.completed }"
-          >
-            {{ todo.title }}
-          </span>
+          <div class="flex-1 min-w-0">
+             <div class="flex items-center gap-2 mb-1">
+                  <span :class="['text-xs px-2 py-0.5 rounded-full font-medium', getPriorityColor(todo.priority)]">
+                      {{ t('priority_' + (todo.priority || 'medium')) }}
+                  </span>
+                  <span v-if="todo.due_date" class="text-xs text-gray-500 flex items-center gap-1">
+                      <PhClock size="12" /> {{ formatDate(todo.due_date) }}
+                  </span>
+              </div>
+            <span
+              class="block text-lg transition-all truncate"
+              :class="{ 'line-through text-gray-400': todo.completed }"
+            >
+              {{ todo.title }}
+            </span>
+          </div>
 
-          <button
-            @click="todoStore.deleteTodo(todo.id)"
-            class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2"
-          >
-            <PhTrash size="20" />
-          </button>
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+               <button
+                @click="startEdit(todo)"
+                class="p-2 text-gray-400 hover:text-blue-500 transition-all"
+                :title="t('edit')"
+              >
+                <PhPencil size="20" />
+              </button>
+              <button
+                @click="todoStore.deleteTodo(todo.id)"
+                class="p-2 text-gray-400 hover:text-red-500 transition-all"
+              >
+                <PhTrash size="20" />
+              </button>
+          </div>
         </div>
 
         <div v-if="filteredTodos.length === 0" class="p-8 text-center text-gray-400">
           No tasks found
         </div>
       </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div v-if="editingTodo" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 class="text-xl font-bold mb-4">{{ t('edit') }}</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Title</label>
+                    <input v-model="editForm.title" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                         <label class="block text-sm font-medium mb-1">{{ t('priority') }}</label>
+                         <BaseSelect v-model="editForm.priority" :options="priorityOptions" class="w-full" />
+                    </div>
+                    <div class="flex-1">
+                         <label class="block text-sm font-medium mb-1">{{ t('due_date') }}</label>
+                         <input type="datetime-local" v-model="editForm.due_date" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700" />
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button @click="cancelEdit" class="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors">{{ t('cancel') }}</button>
+                    <button @click="saveEdit" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors">{{ t('save') }}</button>
+                </div>
+            </div>
+        </div>
     </div>
   </div>
 </template>

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 	"todo/backend/db"
 	"todo/backend/service"
 )
@@ -22,13 +23,15 @@ func GetTodosHandler(w http.ResponseWriter, r *http.Request) {
 
 func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Title string `json:"title"`
+		Title    string     `json:"title"`
+		Priority string     `json:"priority"`
+		DueDate  *time.Time `json:"due_date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := service.CreateTodo(req.Title)
+	id, err := service.CreateTodo(req.Title, req.Priority, req.DueDate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -41,17 +44,34 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idStr)
 
 	var req struct {
-		Completed bool `json:"completed"`
+		Completed *bool      `json:"completed"`
+		Title     *string    `json:"title"`
+		Priority  *string    `json:"priority"`
+		DueDate   *time.Time `json:"due_date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := service.UpdateTodo(id, req.Completed); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if req.Completed != nil {
+		if err := service.UpdateTodoStatus(id, *req.Completed); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
+
+	if req.Title != nil {
+		priority := "medium"
+		if req.Priority != nil {
+			priority = *req.Priority
+		}
+		if err := service.UpdateTodoDetails(id, *req.Title, priority, req.DueDate); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
