@@ -10,5 +10,5 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "wailsjsdir": "./frontend/src",
-  "outputfilename": "todo"
+  "outputfilename": "TodoApp"
 }

@@ -1,70 +1,181 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
-  release:
-    name: Release on ${{ matrix.os }}
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          if [[ "$VERSION" =~ -(alpha|beta)($|\.) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag ${{ steps.get_version.outputs.tag }} || echo "Tag exists"
+          git push origin ${{ steps.get_version.outputs.tag }} || echo "Tag pushed"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          if [ -f "CHANGELOG.md" ]; then
+             # Simple extraction could be added here, for now use whole file or fallback
+             cat CHANGELOG.md > RELEASE_NOTES.md
+           else
+             git log --pretty=format:"* %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD > RELEASE_NOTES.md || echo "Initial release" > RELEASE_NOTES.md
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: TodoApp ${{ steps.get_version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ steps.get_version.outputs.is_prerelease == 'true' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-release:
+    needs: create-release
+    name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            platform: linux/amd64
-            make_target: build-linux
+            platform: linux
+            arch: amd64
           - os: windows-latest
-            platform: windows/amd64
-            make_target: build-windows
+            platform: windows
+            arch: amd64
           - os: macos-latest
-            platform: darwin/universal
-            make_target: build-darwin
+            platform: darwin
+            arch: universal
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
+      - name: Update Version in package.json
+        shell: bash
+        run: |
+          # Update version in frontend/package.json for scripts to pick up
+          VERSION="${{ needs.create-release.outputs.version }}"
+          sed -i 's/"version": ".*"/"version": "'$VERSION'"/' frontend/package.json || true
 
-    - name: Set up Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
 
-    - name: Install Linux Dependencies
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install Wails
-      run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+      - name: Install Linux Deps
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev wget file
 
-    - name: Install Dependencies
-      run: make install-deps
+      - name: Install Windows Deps
+        if: matrix.platform == 'windows'
+        run: choco install mingw nsis -y
 
-    - name: Build Application
-      run: make ${{ matrix.make_target }}
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: TodoApp-${{ matrix.os }}
-        path: build/bin/*
+      - name: Build (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          wails build -platform linux/amd64 -tags webkit2_41
+          
+          # Create AppImage
+          chmod +x build/linux/create-appimage.sh
+          ./build/linux/create-appimage.sh
+          
+          # Create Portable (tar.gz)
+          mkdir -p build/portable
+          cp build/bin/TodoApp build/portable/
+          touch build/portable/portable.txt
+          tar -czf build/bin/TodoApp-${{ needs.create-release.outputs.version }}-linux-amd64-portable.tar.gz -C build/portable .
+          
+          # Create Standard Package (tar.gz)
+          tar -czf build/bin/TodoApp-${{ needs.create-release.outputs.version }}-linux-amd64.tar.gz -C build/bin TodoApp
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          build/bin/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          wails build -platform windows/amd64
+          
+          # Create Installer (NSIS)
+          $version = "${{ needs.create-release.outputs.version }}"
+          $content = Get-Content build/windows/installer.nsi -Raw
+          $content = $content -replace '!define APP_VERSION ".*"', "!define APP_VERSION `"$version`""
+          Set-Content build/windows/installer.nsi $content
+          makensis build/windows/installer.nsi
+          
+          # Create Portable (Zip)
+          New-Item -ItemType Directory -Force -Path build/portable
+          Copy-Item build/bin/TodoApp.exe build/portable/
+          New-Item -ItemType File -Path build/portable/portable.txt
+          Compress-Archive -Path build/portable/* -DestinationPath build/bin/TodoApp-$version-windows-amd64-portable.zip
+
+      - name: Build (macOS)
+        if: matrix.platform == 'darwin'
+        run: |
+          wails build -platform darwin/universal
+          
+          # Create DMG
+          chmod +x build/darwin/create-dmg.sh
+          ./build/darwin/create-dmg.sh
+          
+          # Create Portable (Zip)
+          mkdir -p build/portable
+          cp -R build/bin/TodoApp.app build/portable/
+          touch build/portable/portable.txt
+          cd build/portable
+          zip -r ../bin/TodoApp-${{ needs.create-release.outputs.version }}-darwin-universal-portable.zip *
+
+      - name: Upload Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          files: |
+            build/bin/*.AppImage
+            build/bin/*.dmg
+            build/bin/*.exe
+            build/bin/*.zip
+            build/bin/*.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false
