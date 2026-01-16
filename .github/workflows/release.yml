@@ -90,8 +90,8 @@ jobs:
         shell: bash
         run: |
           # Update version in frontend/package.json for scripts to pick up
-          VERSION="${{ needs.create-release.outputs.version }}"
-          sed -i 's/"version": ".*"/"version": "'$VERSION'"/' frontend/package.json || true
+          cd frontend
+          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -162,7 +162,7 @@ jobs:
           
           # Create DMG
           chmod +x build/darwin/create-dmg.sh
-          ./build/darwin/create-dmg.sh
+          ./build/darwin/create-dmg.sh "${{ needs.create-release.outputs.version }}"
           
           # Create Portable (Zip)
           mkdir -p build/portable

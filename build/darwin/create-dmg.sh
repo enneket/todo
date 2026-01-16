@@ -1,7 +1,14 @@
 #!/bin/bash
 set -e
 APP_NAME="TodoApp"
-VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' frontend/package.json 2>/dev/null | head -1 | sed 's/.*"\([^"]*\)".*/\1/' || echo "1.0.0")
+
+# Allow version to be passed as first argument
+if [ -n "$1" ]; then
+    VERSION="$1"
+else
+    VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' frontend/package.json 2>/dev/null | head -1 | sed 's/.*"\([^"]*\)".*/\1/' || echo "1.0.0")
+fi
+
 BUILD_DIR="build/bin"
 
 # Dynamically find the .app bundle to handle potential naming variations
@@ -16,7 +23,6 @@ fi
 
 # Use the found app name for DMG creation
 APP_FILENAME=$(basename "${APP_PATH}")
-APP_NAME="${APP_FILENAME%.*}"
 
 DMG_DIR="build/dmg"
 DMG_NAME="${APP_NAME}-${VERSION}-darwin-universal.dmg"
