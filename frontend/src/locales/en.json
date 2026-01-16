@@ -1,0 +1,9 @@
+{
+  "title": "Todo App",
+  "add": "Add",
+  "placeholder": "What needs to be done?",
+  "active": "Active",
+  "completed": "Completed",
+  "all": "All",
+  "language": "Language"
+}
