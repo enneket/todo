@@ -127,10 +127,14 @@ jobs:
             exit 1
           fi
         elif [ "${{ runner.os }}" = "macOS" ]; then
-          if [ -d "build/bin/TodoApp.app" ]; then
+          # macOS Wails build creates a bundle named after the 'name' in wails.json (todo.app)
+          # containing the binary named after 'outputfilename' (TodoApp)
+          if [ -d "build/bin/todo.app" ]; then
             echo "✅ macOS artifact found"
+          elif [ -d "build/bin/TodoApp.app" ]; then
+             echo "✅ macOS artifact found (TodoApp.app)"
           else
-            echo "❌ macOS artifact missing at build/bin/TodoApp.app"
+            echo "❌ macOS artifact missing. Expected build/bin/todo.app"
             exit 1
           fi
         fi
