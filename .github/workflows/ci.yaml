@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     # 为不同系统设置标识，方便后续步骤区分
     env:
-      WAILS_VERSION: v2.8.0  # 锁定Wails版本，避免版本漂移
+      WAILS_VERSION: v2.11.0  # 更新Wails版本以匹配项目要求 (Go 1.24+)
 
     steps:
     - uses: actions/checkout@v4
