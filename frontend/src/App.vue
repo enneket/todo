@@ -2,11 +2,14 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTodoStore, type Todo } from './stores/todo'
-import { PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, PhClock, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, PhClock, PhMagnifyingGlass, PhWarning, PhChartBar } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
+import StatisticsPanel from './components/StatisticsPanel.vue'
 
 const { t, locale } = useI18n()
 const todoStore = useTodoStore()
+
+const showStats = ref(false)
 
 const priorityOptions = computed(() => [
     { value: 'high', label: t('priority_high') },
@@ -135,6 +138,22 @@ const formatDate = (dateStr: string | null) => {
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })
 }
+
+const getDueDateStatus = (dateStr: string | null, completed: boolean) => {
+    if (!dateStr || completed) return { status: '', label: '', color: '' }
+    
+    const now = new Date()
+    const due = new Date(dateStr)
+    const diff = due.getTime() - now.getTime()
+    const hours = diff / (1000 * 60 * 60)
+    
+    if (diff < 0) {
+        return { status: 'overdue', label: 'overdue', color: 'text-red-500 font-bold' }
+    } else if (hours <= 24) {
+        return { status: 'soon', label: 'due_soon', color: 'text-orange-500 font-medium' }
+    }
+    return { status: 'future', label: '', color: 'text-slate-400' }
+}
 </script>
 
 <template>
@@ -162,6 +181,14 @@ const formatDate = (dateStr: string | null) => {
                 />
             </div>
             <button
+              @click="showStats = !showStats"
+              class="p-2 text-slate-400 hover:text-slate-700 hover:bg-white hover:shadow-sm rounded-full transition-all"
+              :title="t('statistics')"
+              :class="{ 'text-primary-500 bg-white shadow-sm': showStats }"
+            >
+              <PhChartBar size="24" />
+            </button>
+            <button
               @click="toggleLanguage"
               class="p-2 text-slate-400 hover:text-slate-700 hover:bg-white hover:shadow-sm rounded-full transition-all"
               :title="t('language')"
@@ -170,6 +197,18 @@ const formatDate = (dateStr: string | null) => {
             </button>
         </div>
       </header>
+
+      <!-- Stats Panel -->
+      <transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0 -translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-4"
+      >
+        <StatisticsPanel v-if="showStats" />
+      </transition>
 
       <!-- Add Button (Hero) -->
       <button
@@ -222,8 +261,13 @@ const formatDate = (dateStr: string | null) => {
                         <span :class="['text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md', getPriorityColor(todo.priority)]">
                             {{ t('priority_' + (todo.priority || 'medium')) }}
                         </span>
-                        <span v-if="todo.due_date" class="text-xs text-slate-400 flex items-center gap-1 font-medium bg-slate-50 px-2 py-0.5 rounded-md">
-                            <PhClock size="12" weight="bold" /> {{ formatDate(todo.due_date) }}
+                        <span v-if="todo.due_date" :class="['text-xs flex items-center gap-1 font-medium bg-slate-50 px-2 py-0.5 rounded-md', getDueDateStatus(todo.due_date, todo.completed).color]">
+                            <PhClock v-if="getDueDateStatus(todo.due_date, todo.completed).status !== 'overdue'" size="12" weight="bold" />
+                            <PhWarning v-else size="12" weight="fill" />
+                            {{ formatDate(todo.due_date) }}
+                            <span v-if="getDueDateStatus(todo.due_date, todo.completed).label">
+                                ({{ t(getDueDateStatus(todo.due_date, todo.completed).label) }})
+                            </span>
                         </span>
                         <div class="flex gap-1">
                             <span v-for="tag in todo.tags" :key="tag" class="text-xs px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 font-medium">

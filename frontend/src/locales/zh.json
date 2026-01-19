@@ -18,5 +18,12 @@
   "description": "描述",
   "tags": "标签（用逗号分隔）",
   "tags_label": "标签",
-  "modal_title": "标题"
+  "modal_title": "标题",
+  "overdue": "已逾期",
+  "due_soon": "即将到期",
+  "no_tasks": "暂无任务",
+  "statistics": "统计",
+  "total": "总计",
+  "rate": "完成率",
+  "count": "数量"
 }

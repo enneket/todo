@@ -18,5 +18,12 @@
   "description": "Description",
   "tags": "Tags (comma separated)",
   "tags_label": "Tags",
-  "modal_title": "Title"
+  "modal_title": "Title",
+  "overdue": "Overdue",
+  "due_soon": "Due Soon",
+  "no_tasks": "No tasks found",
+  "statistics": "Statistics",
+  "total": "Total",
+  "rate": "Completion Rate",
+  "count": "Count"
 }
