@@ -26,28 +26,6 @@ jobs:
         # 拉取完整历史，避免测试/构建时缺少依赖
         fetch-depth: 0
 
-    # ===== 新增：缓存优化（核心提升CI效率）=====
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/go/pkg/mod
-          %LocalAppData%\go\pkg\mod  # Windows路径
-          ~/Library/Caches/go-build # macOS路径
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Cache Node modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          node_modules
-          ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     # ===== 基础环境配置（优化版本锁定和系统适配）=====
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -62,6 +40,8 @@ jobs:
         node-version: '20'
         # 启用Node缓存
         cache: 'npm'
+        # 指定缓存依赖文件路径，涵盖所有子目录
+        cache-dependency-path: '**/package-lock.json'
 
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
