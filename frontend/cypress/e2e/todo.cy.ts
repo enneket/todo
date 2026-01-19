@@ -22,8 +22,12 @@ describe('Todo App', () => {
   it('should add a new todo', () => {
     const todoText = 'New Test Todo ' + Date.now()
     
-    // Type into input and press enter
-    cy.get('input[type="text"]').type(`${todoText}{enter}`)
+    // Open modal
+    cy.contains('button', 'Add').click()
+    // Type into title
+    cy.get('input[placeholder="What needs to be done?"]').type(todoText)
+    // Click Add in modal
+    cy.get('.fixed button').contains('Add').click()
 
     // Verify it appears in the list (scroll if needed)
     cy.contains(todoText).scrollIntoView().should('be.visible')
@@ -33,12 +37,14 @@ describe('Todo App', () => {
     const todoText = 'Toggle Test ' + Date.now()
     
     // Add todo
-    cy.get('input[type="text"]').type(`${todoText}{enter}`)
+    cy.contains('button', 'Add').click()
+    cy.get('input[placeholder="What needs to be done?"]').type(todoText)
+    cy.get('.fixed button').contains('Add').click()
     
     // Find the todo item and click the check circle (button)
     cy.contains(todoText)
       .scrollIntoView()
-      .parent()
+      .parents('.group')
       .find('button')
       .first()
       .click()
@@ -52,13 +58,18 @@ describe('Todo App', () => {
     const completedText = 'Completed Task ' + Date.now()
 
     // Add two tasks
-    cy.get('input[type="text"]').type(`${activeText}{enter}`)
-    cy.get('input[type="text"]').type(`${completedText}{enter}`)
+    cy.contains('button', 'Add').click()
+    cy.get('input[placeholder="What needs to be done?"]').type(activeText)
+    cy.get('.fixed button').contains('Add').click()
+
+    cy.contains('button', 'Add').click()
+    cy.get('input[placeholder="What needs to be done?"]').type(completedText)
+    cy.get('.fixed button').contains('Add').click()
 
     // Complete the second one
     cy.contains(completedText)
       .scrollIntoView()
-      .parent()
+      .parents('.group')
       .find('button')
       .first()
       .click()
@@ -86,13 +97,15 @@ describe('Todo App', () => {
     const todoText = 'Delete Test ' + Date.now()
     
     // Add todo
-    cy.get('input[type="text"]').type(`${todoText}{enter}`)
+    cy.contains('button', 'Add').click()
+    cy.get('input[placeholder="What needs to be done?"]').type(todoText)
+    cy.get('.fixed button').contains('Add').click()
     
     // Hover over the todo item to make delete button visible (if using group-hover)
     // Cypress can force click hidden elements
     cy.contains(todoText)
       .scrollIntoView()
-      .parent()
+      .parents('.group')
       .find('button')
       .last() // Assuming delete is the last button
       .click({ force: true })
