@@ -166,7 +166,7 @@ jobs:
         working-directory: ./frontend
         shell: bash
         run: |
-          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version
+          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Install frontend dependencies
         working-directory: ./frontend
