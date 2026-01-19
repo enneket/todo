@@ -106,17 +106,34 @@ jobs:
 
     # ===== 新增：验证构建产物是否存在 =====
     - name: Verify Build Artifact
+      shell: bash
       run: |
-        # 根据不同系统检查产物，需根据你的Wails项目输出路径调整
+        echo "Verifying build artifact for ${{ runner.os }}..."
+        
+        # Debug: List build directory
+        ls -R build/bin/ || echo "build/bin directory not found"
+        
         if [ "${{ runner.os }}" = "Linux" ]; then
-          # 假设Linux产物在build/linux下
-          ls -la build/linux/ && [ -f build/linux/your-app-name ] || { echo "Linux产物缺失"; exit 1; }
+          if [ -f "build/bin/TodoApp" ]; then
+            echo "✅ Linux artifact found"
+          else
+            echo "❌ Linux artifact missing at build/bin/TodoApp"
+            exit 1
+          fi
         elif [ "${{ runner.os }}" = "Windows" ]; then
-          # Windows产物通常是exe文件
-          dir build\windows\ && if not exist build\windows\your-app-name.exe (echo Windows产物缺失 && exit 1)
+          if [ -f "build/bin/TodoApp.exe" ]; then
+            echo "✅ Windows artifact found"
+          else
+            echo "❌ Windows artifact missing at build/bin/TodoApp.exe"
+            exit 1
+          fi
         elif [ "${{ runner.os }}" = "macOS" ]; then
-          # macOS产物通常是app包
-          ls -la build/darwin/ && [ -d build/darwin/your-app-name.app ] || { echo "macOS产物缺失"; exit 1; }
+          if [ -d "build/bin/TodoApp.app" ]; then
+            echo "✅ macOS artifact found"
+          else
+            echo "❌ macOS artifact missing at build/bin/TodoApp.app"
+            exit 1
+          fi
         fi
 
     # ===== 可选：上传测试覆盖率报告（方便查看）=====
