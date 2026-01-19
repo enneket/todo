@@ -15,5 +15,7 @@
   "save": "Save",
   "cancel": "Cancel",
   "search": "Search...",
-  "description": "Description"
+  "description": "Description",
+  "tags": "Tags (comma separated)",
+  "tags_label": "Tags"
 }

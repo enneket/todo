@@ -32,6 +32,7 @@ func InitDB(dbPath string) error {
 	DB.Exec(`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN due_date DATETIME`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`)
+	DB.Exec(`ALTER TABLE todos ADD COLUMN tags TEXT DEFAULT '[]'`)
 
 	return nil
 }

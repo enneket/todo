@@ -27,12 +27,13 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		Description string     `json:"description"`
 		Priority    string     `json:"priority"`
 		DueDate     *time.Time `json:"due_date"`
+		Tags        []string   `json:"tags"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate)
+	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate, req.Tags)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,6 +51,7 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		Description *string    `json:"description"`
 		Priority    *string    `json:"priority"`
 		DueDate     *time.Time `json:"due_date"`
+		Tags        []string   `json:"tags"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -72,7 +74,11 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		if req.Description != nil {
 			description = *req.Description
 		}
-		if err := service.UpdateTodoDetails(id, *req.Title, description, priority, req.DueDate); err != nil {
+		tags := []string{}
+		if req.Tags != nil {
+			tags = req.Tags
+		}
+		if err := service.UpdateTodoDetails(id, *req.Title, description, priority, req.DueDate, tags); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

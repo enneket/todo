@@ -8,6 +8,7 @@ type Todo struct {
 	Description string     `json:"description"`
 	Completed   bool       `json:"completed"`
 	Priority    string     `json:"priority"`
-	DueDate   *time.Time `json:"due_date"`
-	CreatedAt time.Time  `json:"created_at"`
+	DueDate     *time.Time `json:"due_date"`
+	Tags        []string   `json:"tags"`
+	CreatedAt   time.Time  `json:"created_at"`
 }

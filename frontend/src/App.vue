@@ -25,6 +25,7 @@ const newTodoTitle = ref('')
 const newTodoDescription = ref('')
 const newTodoPriority = ref('medium')
 const newTodoDueDate = ref(getDefaultDueDate())
+const newTodoTags = ref('')
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
@@ -34,7 +35,8 @@ const editForm = ref({
   title: '',
   description: '',
   priority: 'medium',
-  due_date: ''
+  due_date: '',
+  tags: ''
 })
 
 onMounted(() => {
@@ -45,11 +47,15 @@ const handleAddTodo = async () => {
   if (!newTodoTitle.value.trim()) return
   let dateToSend = newTodoDueDate.value ? new Date(newTodoDueDate.value).toISOString() : ''
   
-  await todoStore.addTodo(newTodoTitle.value, newTodoPriority.value, dateToSend, newTodoDescription.value)
+  // Parse tags: comma separated
+  const tags = newTodoTags.value.split(',').map(t => t.trim()).filter(t => t)
+
+  await todoStore.addTodo(newTodoTitle.value, newTodoPriority.value, dateToSend, newTodoDescription.value, tags)
   newTodoTitle.value = ''
   newTodoDescription.value = ''
   newTodoPriority.value = 'medium'
   newTodoDueDate.value = getDefaultDueDate()
+  newTodoTags.value = ''
 }
 
 const startEdit = (todo: Todo) => {
@@ -68,7 +74,8 @@ const startEdit = (todo: Todo) => {
     title: todo.title,
     description: todo.description || '',
     priority: todo.priority || 'medium',
-    due_date: dateStr
+    due_date: dateStr,
+    tags: todo.tags ? todo.tags.join(', ') : ''
   }
 }
 
@@ -81,12 +88,14 @@ const saveEdit = async () => {
   if (!editForm.value.title.trim()) return
 
   let dateToSend = editForm.value.due_date ? new Date(editForm.value.due_date).toISOString() : ''
+  const tags = editForm.value.tags.split(',').map(t => t.trim()).filter(t => t)
   
   await todoStore.updateTodo(editingTodo.value.id, {
     title: editForm.value.title,
     description: editForm.value.description,
     priority: editForm.value.priority as any,
-    due_date: dateToSend
+    due_date: dateToSend,
+    tags: tags
   })
   editingTodo.value = null
 }
@@ -99,7 +108,8 @@ const filteredTodos = computed(() => {
       const q = searchQuery.value.toLowerCase()
       items = items.filter(t => 
         t.title.toLowerCase().includes(q) || 
-        (t.description && t.description.toLowerCase().includes(q))
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.tags && t.tags.some(tag => tag.toLowerCase().includes(q)))
       )
   }
 
@@ -172,6 +182,7 @@ const formatDate = (dateStr: string | null) => {
           <div class="flex flex-wrap gap-4 items-center">
               <BaseSelect v-model="newTodoPriority" :options="priorityOptions" />
               <input type="datetime-local" v-model="newTodoDueDate" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px]" />
+              <input type="text" v-model="newTodoTags" :placeholder="t('tags')" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px] flex-1 min-w-[150px]" />
               <button
                 @click="handleAddTodo"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ml-auto h-[42px]"
@@ -222,6 +233,11 @@ const formatDate = (dateStr: string | null) => {
                   <span v-if="todo.due_date" class="text-xs text-gray-500 flex items-center gap-1">
                       <PhClock size="12" /> {{ formatDate(todo.due_date) }}
                   </span>
+                  <div class="flex gap-1 ml-2">
+                    <span v-for="tag in todo.tags" :key="tag" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        #{{ tag }}
+                    </span>
+                  </div>
               </div>
             <span
               class="block text-lg transition-all truncate"
@@ -279,6 +295,10 @@ const formatDate = (dateStr: string | null) => {
                          <label class="block text-sm font-medium mb-1">{{ t('due_date') }}</label>
                          <input type="datetime-local" v-model="editForm.due_date" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700" />
                     </div>
+                </div>
+                <div>
+                     <label class="block text-sm font-medium mb-1">{{ t('tags_label') }}</label>
+                     <input v-model="editForm.tags" type="text" :placeholder="t('tags')" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
                     <button @click="cancelEdit" class="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors">{{ t('cancel') }}</button>

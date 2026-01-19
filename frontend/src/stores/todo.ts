@@ -9,6 +9,7 @@ export interface Todo {
   completed: boolean
   priority: 'high' | 'medium' | 'low'
   due_date: string | null
+  tags: string[]
   created_at: string
 }
 
@@ -26,11 +27,11 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '') => {
+  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '', tags: string[] = []) => {
     try {
       // If dueDate is empty string, send null
       const dateToSend = dueDate === '' ? null : dueDate
-      await axios.post(API_URL, { title, description, priority, due_date: dateToSend })
+      await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags })
       await fetchTodos()
     } catch (error) {
       console.error('Failed to add todo:', error)
