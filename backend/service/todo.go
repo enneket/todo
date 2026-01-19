@@ -5,11 +5,11 @@ import (
 	"todo/backend/db"
 )
 
-func CreateTodo(title, priority string, dueDate *time.Time) (int64, error) {
+func CreateTodo(title, description, priority string, dueDate *time.Time) (int64, error) {
 	if priority == "" {
 		priority = "medium"
 	}
-	res, err := db.DB.Exec("INSERT INTO todos (title, priority, due_date) VALUES (?, ?, ?)", title, priority, dueDate)
+	res, err := db.DB.Exec("INSERT INTO todos (title, description, priority, due_date) VALUES (?, ?, ?, ?)", title, description, priority, dueDate)
 	if err != nil {
 		return 0, err
 	}
@@ -17,7 +17,7 @@ func CreateTodo(title, priority string, dueDate *time.Time) (int64, error) {
 }
 
 func GetTodos() ([]db.Todo, error) {
-	rows, err := db.DB.Query("SELECT id, title, completed, priority, due_date, created_at FROM todos ORDER BY created_at DESC")
+	rows, err := db.DB.Query("SELECT id, title, description, completed, priority, due_date, created_at FROM todos ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,9 @@ func GetTodos() ([]db.Todo, error) {
 	var todos []db.Todo
 	for rows.Next() {
 		var t db.Todo
-		if err := rows.Scan(&t.ID, &t.Title, &t.Completed, &t.Priority, &t.DueDate, &t.CreatedAt); err != nil {
+		// Handle description being potentially NULL if DB was manually messed with, but we set DEFAULT ''
+		// Scan automatically handles empty strings for TEXT
+		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueDate, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		todos = append(todos, t)
@@ -39,8 +41,8 @@ func UpdateTodoStatus(id int, completed bool) error {
 	return err
 }
 
-func UpdateTodoDetails(id int, title, priority string, dueDate *time.Time) error {
-	_, err := db.DB.Exec("UPDATE todos SET title = ?, priority = ?, due_date = ? WHERE id = ?", title, priority, dueDate, id)
+func UpdateTodoDetails(id int, title, description, priority string, dueDate *time.Time) error {
+	_, err := db.DB.Exec("UPDATE todos SET title = ?, description = ?, priority = ?, due_date = ? WHERE id = ?", title, description, priority, dueDate, id)
 	return err
 }
 

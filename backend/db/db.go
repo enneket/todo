@@ -31,6 +31,7 @@ func InitDB(dbPath string) error {
 	// We ignore errors here because "duplicate column name" is expected if run multiple times
 	DB.Exec(`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN due_date DATETIME`)
+	DB.Exec(`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`)
 
 	return nil
 }

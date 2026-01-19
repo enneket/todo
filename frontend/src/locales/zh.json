@@ -13,5 +13,7 @@
   "due_date": "截止日期",
   "edit": "编辑",
   "save": "保存",
-  "cancel": "取消"
+  "cancel": "取消",
+  "search": "搜索...",
+  "description": "描述"
 }

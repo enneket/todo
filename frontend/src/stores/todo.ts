@@ -5,6 +5,7 @@ import { ref } from 'vue'
 export interface Todo {
   id: number
   title: string
+  description: string
   completed: boolean
   priority: 'high' | 'medium' | 'low'
   due_date: string | null
@@ -25,11 +26,11 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null) => {
+  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '') => {
     try {
       // If dueDate is empty string, send null
       const dateToSend = dueDate === '' ? null : dueDate
-      await axios.post(API_URL, { title, priority, due_date: dateToSend })
+      await axios.post(API_URL, { title, description, priority, due_date: dateToSend })
       await fetchTodos()
     } catch (error) {
       console.error('Failed to add todo:', error)

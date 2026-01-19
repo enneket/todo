@@ -13,5 +13,7 @@
   "due_date": "Due Date",
   "edit": "Edit",
   "save": "Save",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "search": "Search...",
+  "description": "Description"
 }

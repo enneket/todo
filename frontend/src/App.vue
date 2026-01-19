@@ -22,14 +22,17 @@ const getDefaultDueDate = () => {
 }
 
 const newTodoTitle = ref('')
+const newTodoDescription = ref('')
 const newTodoPriority = ref('medium')
 const newTodoDueDate = ref(getDefaultDueDate())
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
+const searchQuery = ref('')
 
 const editingTodo = ref<Todo | null>(null)
 const editForm = ref({
   title: '',
+  description: '',
   priority: 'medium',
   due_date: ''
 })
@@ -42,26 +45,20 @@ const handleAddTodo = async () => {
   if (!newTodoTitle.value.trim()) return
   let dateToSend = newTodoDueDate.value ? new Date(newTodoDueDate.value).toISOString() : ''
   
-  await todoStore.addTodo(newTodoTitle.value, newTodoPriority.value, dateToSend)
+  await todoStore.addTodo(newTodoTitle.value, newTodoPriority.value, dateToSend, newTodoDescription.value)
   newTodoTitle.value = ''
+  newTodoDescription.value = ''
   newTodoPriority.value = 'medium'
-  newTodoDueDate.value = ''
+  newTodoDueDate.value = getDefaultDueDate()
 }
 
 const startEdit = (todo: Todo) => {
   editingTodo.value = todo
-  // Convert ISO string back to datetime-local format (YYYY-MM-DDThh:mm)
-  // Note: This simple slicing assumes local time or ignores timezone issues, 
-  // but for a simple app we might want to handle it better. 
-  // However, todo.due_date comes as UTC ISO string.
-  // datetime-local expects local time.
-  // Let's keep it simple: new Date(str).toISOString() returns UTC.
-  // To show in input, we need local ISO.
+  // ... (date conversion logic stays same)
   
   let dateStr = ''
   if (todo.due_date) {
       const d = new Date(todo.due_date)
-      // Adjust to local ISO string for input
       const offset = d.getTimezoneOffset() * 60000
       const localISOTime = (new Date(d.getTime() - offset)).toISOString().slice(0, 16)
       dateStr = localISOTime
@@ -69,6 +66,7 @@ const startEdit = (todo: Todo) => {
 
   editForm.value = {
     title: todo.title,
+    description: todo.description || '',
     priority: todo.priority || 'medium',
     due_date: dateStr
   }
@@ -86,6 +84,7 @@ const saveEdit = async () => {
   
   await todoStore.updateTodo(editingTodo.value.id, {
     title: editForm.value.title,
+    description: editForm.value.description,
     priority: editForm.value.priority as any,
     due_date: dateToSend
   })
@@ -93,9 +92,20 @@ const saveEdit = async () => {
 }
 
 const filteredTodos = computed(() => {
-  if (filter.value === 'active') return todoStore.todos.filter((t) => !t.completed)
-  if (filter.value === 'completed') return todoStore.todos.filter((t) => t.completed)
-  return todoStore.todos
+  let items = todoStore.todos
+  
+  // Search filter
+  if (searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase()
+      items = items.filter(t => 
+        t.title.toLowerCase().includes(q) || 
+        (t.description && t.description.toLowerCase().includes(q))
+      )
+  }
+
+  if (filter.value === 'active') return items.filter((t) => !t.completed)
+  if (filter.value === 'completed') return items.filter((t) => t.completed)
+  return items
 })
 
 const toggleLanguage = () => {
@@ -122,13 +132,21 @@ const formatDate = (dateStr: string | null) => {
     <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
       <!-- Header -->
       <header class="p-6 bg-blue-600 text-white flex justify-between items-center">
-        <h1 class="text-2xl font-bold flex items-center gap-2">
-          <PhCheckCircle weight="bold" />
-          {{ t('title') }}
-        </h1>
+        <div class="flex items-center gap-4 flex-1">
+            <h1 class="text-2xl font-bold flex items-center gap-2 whitespace-nowrap">
+            <PhCheckCircle weight="bold" />
+            {{ t('title') }}
+            </h1>
+            <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="t('search')"
+                class="bg-blue-700/50 text-white placeholder-blue-200 border-none rounded-lg px-4 py-2 w-full max-w-xs focus:ring-2 focus:ring-white/50 transition-all"
+            />
+        </div>
         <button
           @click="toggleLanguage"
-          class="p-2 hover:bg-blue-700 rounded-full transition-colors"
+          class="p-2 hover:bg-blue-700 rounded-full transition-colors ml-4"
           :title="t('language')"
         >
           <PhTranslate size="24" />
@@ -137,13 +155,20 @@ const formatDate = (dateStr: string | null) => {
 
       <!-- Input -->
       <div class="p-6 border-b border-gray-200 dark:border-gray-700 space-y-4">
-        <input
-            v-model="newTodoTitle"
-            @keyup.enter="handleAddTodo"
-            type="text"
-            :placeholder="t('placeholder')"
-            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-          />
+        <div class="space-y-2">
+            <input
+                v-model="newTodoTitle"
+                @keyup.enter="handleAddTodo"
+                type="text"
+                :placeholder="t('placeholder')"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+            <textarea
+                v-model="newTodoDescription"
+                :placeholder="t('description')"
+                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm resize-none h-20"
+            ></textarea>
+        </div>
           <div class="flex flex-wrap gap-4 items-center">
               <BaseSelect v-model="newTodoPriority" :options="priorityOptions" />
               <input type="datetime-local" v-model="newTodoDueDate" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px]" />
@@ -204,6 +229,9 @@ const formatDate = (dateStr: string | null) => {
             >
               {{ todo.title }}
             </span>
+            <p v-if="todo.description" class="text-sm text-gray-500 mt-1 line-clamp-2">
+                {{ todo.description }}
+            </p>
           </div>
 
           <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -237,6 +265,10 @@ const formatDate = (dateStr: string | null) => {
                 <div>
                     <label class="block text-sm font-medium mb-1">Title</label>
                     <input v-model="editForm.title" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">{{ t('description') }}</label>
+                    <textarea v-model="editForm.description" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none"></textarea>
                 </div>
                 <div class="flex gap-4">
                     <div class="flex-1">
