@@ -96,13 +96,12 @@ jobs:
 
     - name: Run Backend Tests (with coverage)
       run: |
-        # 输出测试覆盖率，并存为文件（方便后续上传）
-        make test-backend -v || exit 1
-        # 示例：如果是Go测试，补充覆盖率输出（根据你的makefile调整）
-        go test ./... -coverprofile=coverage.out -covermode=atomic
+        # 使用 Makefile 的覆盖率测试目标
+        make test-coverage
 
     - name: Build Application
-      run: make build -v
+      # 去掉 -v，因为它会被 make 解释为打印版本并退出，导致构建跳过
+      run: make build
 
     # ===== 新增：验证构建产物是否存在 =====
     - name: Verify Build Artifact
