@@ -49,10 +49,12 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 ```
 
 ### Service Pattern
-- Business logic resides here.
-- Returns domain models (`db` structs) and `error`.
-- Handles DB transactions if necessary.
+- **Separation of Concerns**: Logic split into `project.go`, `todo.go`, `subtask.go`.
+- **Domain Models**: Returns structs defined in `db/models.go`.
+- **Error Handling**: Returns standard Go errors, propagated to Handler.
+- **Transactions**: (Future) Use `db.DB.Begin()` for complex multi-table updates.
 
 ### DB Pattern
-- Use `db.DB` global instance (or dependency injection if refactored).
-- Use `Exec` for mutations, `Query` for reads.
+- **Schema Management**: Tables created in `db.go` `InitDB`.
+- **Migrations**: Simple `ALTER TABLE` statements in `InitDB` to support schema evolution.
+- **Queries**: Parameterized queries `?` to prevent SQL injection.

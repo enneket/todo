@@ -9,6 +9,9 @@ graph TD
     User[User] --> GUI[Wails Frontend (Vue 3)]
     GUI -- HTTP REST API (localhost:8081) --> Server[Go HTTP Server]
     Server --> Service[Business Logic Service]
+    Service --> ProjectService[Project Logic]
+    Service --> TodoService[Todo Logic]
+    Service --> SubtaskService[Subtask Logic]
     Service --> DB[(SQLite Database)]
 ```
 
@@ -24,6 +27,11 @@ graph TD
 2. **SQLite Database**:
    - **Decision**: Use `modernc.org/sqlite` (pure Go implementation).
    - **Reasoning**: Removes the need for CGO, making cross-compilation easier and reducing runtime dependency issues (like `libc` versions).
+
+3. **Data Relations**:
+   - **Projects**: Todos can optionally belong to a Project.
+   - **Subtasks**: Todos can contain multiple Subtasks (simple checklist items).
+   - **Foreign Keys**: Enforced at DB level (`ON DELETE CASCADE` for Subtasks, `SET NULL` for Projects).
 
 ### Directory Structure
 

@@ -2,30 +2,32 @@
 
 ## Backend Testing
 
-- **Unit Tests**: Place `_test.go` files next to source files.
-- **Run Tests**: `go test ./...` (or `make test-backend`)
+- **Unit Tests**: Located in `backend/service/service_test.go`.
+- **Framework**: Standard Go `testing` package with **In-Memory SQLite** (`:memory:`).
+- **Run Tests**: `go test -v ./backend/service` (or `make test`)
 
 ## Frontend Testing
 
-- **Unit Tests**: Use Vitest (if configured).
-- **Run Tests**: `npm run test` (or `make test-frontend`)
+- **Unit Tests**: Located in `frontend/src/stores/*.test.ts`.
+- **Framework**: **Vitest** + **HappyDOM** + **Axios Mocking**.
+- **Run Tests**: `npm run test` (in frontend dir) or `make test` (from root).
 
 ## Integration Testing
 
-- Currently manual verification via `wails dev`.
-- Ensure backend API is responding correctly via `curl` or Postman when running.
+- **Manual**: Run `make dev` and interact with the UI.
+- **API**: Use Postman/Curl to hit `localhost:8081/api/*`.
 
 ## E2E Testing (Cypress)
 
-We use Cypress for End-to-End testing of the frontend application.
+We use Cypress for End-to-End testing of the full application flow (Frontend + Backend).
 
 ### Prerequisites
-- The application must be running (e.g., via `make dev` or `wails dev`).
-- The frontend dev server should be accessible at `http://localhost:5175`.
+- The application must be running (`make dev`).
+- Frontend accessible at `http://localhost:5173` (Vite default).
 
 ### Running Tests
-- **Headless Mode**: `make test-e2e` (or `cd frontend && npx cypress run`)
+- **Headless Mode**: `make test-e2e`
 - **Interactive Mode**: `cd frontend && npx cypress open`
 
 ### Test Files
-- `frontend/cypress/e2e/todo.cy.ts`: Covers CRUD operations, filtering, and interactions.
+- `frontend/cypress/e2e/todo.cy.ts`: Covers Todos (Add/Complete), Projects (Create/Filter), and basic navigation.
