@@ -25,5 +25,16 @@
   "statistics": "统计",
   "total": "总计",
   "rate": "完成率",
-  "count": "数量"
+  "count": "数量",
+  "all_tasks": "所有任务",
+  "inbox": "收件箱",
+  "projects": "项目列表",
+  "add_project": "新建项目",
+  "name": "名称",
+  "color": "颜色",
+  "create": "创建",
+  "confirm_delete_project": "确定要删除此项目吗？",
+  "project": "所属项目",
+  "subtasks": "子任务",
+  "add_subtask": "添加子任务..."
 }

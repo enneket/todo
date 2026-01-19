@@ -18,6 +18,17 @@ func StartServer(port string) {
 	mux.HandleFunc("PUT /api/todos/{id}", UpdateTodoHandler)
 	mux.HandleFunc("DELETE /api/todos/{id}", DeleteTodoHandler)
 
+	// Projects
+	mux.HandleFunc("GET /api/projects", GetProjectsHandler)
+	mux.HandleFunc("POST /api/projects", CreateProjectHandler)
+	mux.HandleFunc("PUT /api/projects/{id}", UpdateProjectHandler)
+	mux.HandleFunc("DELETE /api/projects/{id}", DeleteProjectHandler)
+
+	// Subtasks
+	mux.HandleFunc("POST /api/todos/{id}/subtasks", CreateSubtaskHandler)
+	mux.HandleFunc("PUT /api/subtasks/{id}", UpdateSubtaskHandler)
+	mux.HandleFunc("DELETE /api/subtasks/{id}", DeleteSubtaskHandler)
+
 	// Apply CORS
 	handler := corsMiddleware(mux)
 

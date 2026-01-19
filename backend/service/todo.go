@@ -6,7 +6,7 @@ import (
 	"todo/backend/db"
 )
 
-func CreateTodo(title, description, priority string, dueDate *time.Time, tags []string) (int64, error) {
+func CreateTodo(title, description, priority string, dueDate *time.Time, tags []string, projectID *int) (int64, error) {
 	if priority == "" {
 		priority = "medium"
 	}
@@ -15,7 +15,7 @@ func CreateTodo(title, description, priority string, dueDate *time.Time, tags []
 		tagsJSON = []byte("[]")
 	}
 
-	res, err := db.DB.Exec("INSERT INTO todos (title, description, priority, due_date, tags) VALUES (?, ?, ?, ?, ?)", title, description, priority, dueDate, string(tagsJSON))
+	res, err := db.DB.Exec("INSERT INTO todos (title, description, priority, due_date, tags, project_id) VALUES (?, ?, ?, ?, ?, ?)", title, description, priority, dueDate, string(tagsJSON), projectID)
 	if err != nil {
 		return 0, err
 	}
@@ -23,7 +23,7 @@ func CreateTodo(title, description, priority string, dueDate *time.Time, tags []
 }
 
 func GetTodos() ([]db.Todo, error) {
-	rows, err := db.DB.Query("SELECT id, title, description, completed, priority, due_date, tags, created_at FROM todos ORDER BY created_at DESC")
+	rows, err := db.DB.Query("SELECT id, title, description, completed, priority, due_date, tags, project_id, created_at FROM todos ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func GetTodos() ([]db.Todo, error) {
 	for rows.Next() {
 		var t db.Todo
 		var tagsJSON string
-		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueDate, &tagsJSON, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueDate, &tagsJSON, &t.ProjectID, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		if tagsJSON != "" {
@@ -42,6 +42,15 @@ func GetTodos() ([]db.Todo, error) {
 		if t.Tags == nil {
 			t.Tags = []string{}
 		}
+		
+		// Fetch subtasks for this todo
+		subtasks, err := GetSubtasks(t.ID)
+		if err == nil {
+			t.Subtasks = subtasks
+		} else {
+			t.Subtasks = []db.Subtask{}
+		}
+
 		todos = append(todos, t)
 	}
 	return todos, nil
@@ -52,12 +61,12 @@ func UpdateTodoStatus(id int, completed bool) error {
 	return err
 }
 
-func UpdateTodoDetails(id int, title, description, priority string, dueDate *time.Time, tags []string) error {
+func UpdateTodoDetails(id int, title, description, priority string, dueDate *time.Time, tags []string, projectID *int) error {
 	tagsJSON, _ := json.Marshal(tags)
 	if tags == nil {
 		tagsJSON = []byte("[]")
 	}
-	_, err := db.DB.Exec("UPDATE todos SET title = ?, description = ?, priority = ?, due_date = ?, tags = ? WHERE id = ?", title, description, priority, dueDate, string(tagsJSON), id)
+	_, err := db.DB.Exec("UPDATE todos SET title = ?, description = ?, priority = ?, due_date = ?, tags = ?, project_id = ? WHERE id = ?", title, description, priority, dueDate, string(tagsJSON), projectID, id)
 	return err
 }
 

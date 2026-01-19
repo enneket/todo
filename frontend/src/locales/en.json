@@ -25,5 +25,16 @@
   "statistics": "Statistics",
   "total": "Total",
   "rate": "Completion Rate",
-  "count": "Count"
+  "count": "Count",
+  "all_tasks": "All Tasks",
+  "inbox": "Inbox",
+  "projects": "Projects",
+  "add_project": "Add Project",
+  "name": "Name",
+  "color": "Color",
+  "create": "Create",
+  "confirm_delete_project": "Delete this project?",
+  "project": "Project",
+  "subtasks": "Subtasks",
+  "add_subtask": "Add subtask..."
 }

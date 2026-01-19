@@ -3,18 +3,18 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { PhCaretDown, PhCheck } from '@phosphor-icons/vue'
 
 interface Option {
-  value: string
+  value: string | number
   label: string
 }
 
 const props = defineProps<{
-  modelValue: string
+  modelValue: string | number
   options: Option[]
   placeholder?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string | number): void
 }>()
 
 const isOpen = ref(false)
@@ -24,7 +24,7 @@ const toggle = () => {
   isOpen.value = !isOpen.value
 }
 
-const select = (value: string) => {
+const select = (value: string | number) => {
   emit('update:modelValue', value)
   isOpen.value = false
 }
@@ -43,7 +43,7 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-const getLabel = (val: string) => {
+const getLabel = (val: string | number) => {
     return props.options.find(o => o.value === val)?.label || val
 }
 </script>
