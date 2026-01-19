@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-01-19
+
+### Added
+
+#### ✨ Features
+- **Tags System**: Added full support for task tags (add, edit, display, and search).
+- **Task Description**: Added a detailed description field for tasks.
+- **Enhanced Search**: Search now filters by title, description, and tags.
+- **Search Bar**: Added a dedicated search bar in the application header.
+
+#### 🎨 UI/UX
+- **Modal Task Creation**: Replaced inline input with a "Add" button and a comprehensive modal dialog for creating tasks.
+- **Tag Visualization**: Tags are now displayed as pills in the task list.
+- **Improved List View**: Descriptions are now shown in the task list (truncated).
+
+### Changed
+- **Database**: Added `description` and `tags` columns to the schema.
+- **API**: Updated Create/Update endpoints to handle tags and descriptions.
+
+### Fixed
+- **Testing**: Added headless server support (`backend/cmd/server`) for reliable CI/CD testing.
+- **Code Quality**: Fixed various frontend linting issues and type definitions.
+
 ## [0.1.1] - 2026-01-16
 
 ### Added

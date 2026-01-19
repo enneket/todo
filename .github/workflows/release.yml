@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.0)'
+        description: 'Release version (e.g., v1.1.0)'
         required: true
         type: string
 
@@ -22,35 +22,79 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version
+      - name: Get version from input
         id: get_version
         run: |
           VERSION="${{ github.event.inputs.version }}"
+          # Remove 'v' prefix if present
           VERSION="${VERSION#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          # Check if this is a pre-release (alpha or beta)
           if [[ "$VERSION" =~ -(alpha|beta)($|\.) ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a pre-release version: $VERSION"
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release version: $VERSION"
           fi
 
-      - name: Create Tag
+      - name: Check if tag exists
+        id: check_tag
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git tag ${{ steps.get_version.outputs.tag }} || echo "Tag exists"
-          git push origin ${{ steps.get_version.outputs.tag }} || echo "Tag pushed"
+          git fetch --tags
+          if git rev-parse ${{ steps.get_version.outputs.tag }} >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.get_version.outputs.tag }} already exists"
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.get_version.outputs.tag }} does not exist"
+          fi
 
-      - name: Generate Changelog
+      - name: Create Git tag
+        if: steps.check_tag.outputs.tag_exists == 'false'
+        run: |
+          git config user.name "enneket"
+          git config user.email "zhao.jiaxing@qq.com"
+          git tag ${{ steps.get_version.outputs.tag }}
+          git push origin ${{ steps.get_version.outputs.tag }}
+
+      - name: Generate changelog
         id: changelog
         run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Extract changelog for this version from CHANGELOG.md
           if [ -f "CHANGELOG.md" ]; then
-             # Simple extraction could be added here, for now use whole file or fallback
-             cat CHANGELOG.md > RELEASE_NOTES.md
-           else
-             git log --pretty=format:"* %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD > RELEASE_NOTES.md || echo "Initial release" > RELEASE_NOTES.md
+            awk -v ver="$VERSION" '
+              BEGIN { found=0; print_section=0 }
+              /^## \[/ {
+                if (print_section) exit
+                if ($0 ~ "\\[" ver "\\]") {
+                  found=1
+                  print_section=1
+                  next
+                }
+              }
+              print_section && /^## \[/ { exit }
+              print_section { print }
+              END {
+                if (!found) {
+                  print "## What'\''s Changed"
+                  print ""
+                  print "* Release version " ver
+                }
+              }
+            ' CHANGELOG.md > RELEASE_NOTES.md
+          else
+            echo "## What's Changed" > RELEASE_NOTES.md
+            git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s (%h)" >> RELEASE_NOTES.md || echo "* Initial release" >> RELEASE_NOTES.md
           fi
+
+          echo "=== Generated Release Notes ==="
+          cat RELEASE_NOTES.md
+          echo "==============================="
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -58,129 +102,185 @@ jobs:
           tag_name: ${{ steps.get_version.outputs.tag }}
           name: TodoApp ${{ steps.get_version.outputs.tag }}
           body_path: RELEASE_NOTES.md
+          draft: false
           prerelease: ${{ steps.get_version.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ steps.get_version.outputs.is_prerelease == 'false' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-release:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     needs: create-release
-    name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+    env:
+      CGO_ENABLED: '1'
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             platform: linux
             arch: amd64
+            ext: ''
           - os: windows-latest
             platform: windows
             arch: amd64
+            ext: '.exe'
           - os: macos-latest
             platform: darwin
             arch: universal
+            ext: '.app'
 
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-release.outputs.tag }}
 
-      - name: Update Version in package.json
-        shell: bash
-        run: |
-          # Update version in frontend/package.json for scripts to pick up
-          cd frontend
-          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version --allow-same-version
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
 
-      - name: Set up Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Linux Deps
+      - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev wget file libfuse2
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev gcc pkg-config wget file
 
-      - name: Install Windows Deps
+      - name: Install Windows dependencies
         if: matrix.platform == 'windows'
         run: |
           choco install mingw nsis -y
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+        shell: pwsh
 
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Build (Linux)
+      - name: Update frontend version
+        working-directory: ./frontend
+        shell: bash
+        run: |
+          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build application (Linux)
         if: matrix.platform == 'linux'
         run: |
           wails build -platform linux/amd64 -tags webkit2_41
           
-          # Create AppImage
-          chmod +x build/linux/create-appimage.sh
-          ./build/linux/create-appimage.sh
-          
-          # Create Portable (tar.gz)
-          mkdir -p build/portable
-          cp build/bin/TodoApp build/portable/
-          touch build/portable/portable.txt
-          tar -czf build/bin/TodoApp-${{ needs.create-release.outputs.version }}-linux-amd64-portable.tar.gz -C build/portable .
-          
-          # Create Standard Package (tar.gz)
-          tar -czf build/bin/TodoApp-${{ needs.create-release.outputs.version }}-linux-amd64.tar.gz -C build/bin TodoApp
+          # Verify build
+          if [ ! -f "build/bin/TodoApp" ]; then
+            echo "Error: Binary not found"
+            exit 1
+          fi
 
-      - name: Build (Windows)
+      - name: Build application (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           wails build -platform windows/amd64
           
-          # Create Installer (NSIS)
-          $version = "${{ needs.create-release.outputs.version }}"
-          $content = Get-Content build/windows/installer.nsi -Raw
-          $content = $content -replace '!define APP_VERSION ".*"', "!define APP_VERSION `"$version`""
-          Set-Content build/windows/installer.nsi $content
-          makensis build/windows/installer.nsi
-          
-          # Create Portable (Zip)
-          New-Item -ItemType Directory -Force -Path build/portable
-          Copy-Item build/bin/TodoApp.exe build/portable/
-          New-Item -ItemType File -Path build/portable/portable.txt
-          Compress-Archive -Path build/portable/* -DestinationPath build/bin/TodoApp-$version-windows-amd64-portable.zip
+          if (-not (Test-Path "build/bin/TodoApp.exe")) {
+            Write-Error "Binary not created"
+            exit 1
+          }
 
-      - name: Build (macOS)
+      - name: Build application (macOS)
         if: matrix.platform == 'darwin'
         run: |
           wails build -platform darwin/universal
-          
-          # Create DMG
-          chmod +x build/darwin/create-dmg.sh
-          ./build/darwin/create-dmg.sh "${{ needs.create-release.outputs.version }}"
-          
-          # Create Portable (Zip)
-          mkdir -p build/portable
-          APP_PATH=$(find build/bin -maxdepth 1 -name "*.app" | head -n 1)
-          cp -R "$APP_PATH" build/portable/
-          touch build/portable/portable.txt
-          cd build/portable
-          zip -r ../bin/TodoApp-${{ needs.create-release.outputs.version }}-darwin-universal-portable.zip *
 
-      - name: Upload Artifacts
+      - name: Create installer (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $nsisPath = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (-not (Test-Path $nsisPath)) {
+            $nsisPath = "C:\Program Files\NSIS\makensis.exe"
+          }
+          
+          $version = "${{ needs.create-release.outputs.version }}"
+          $installerPath = "build/windows/installer.nsi"
+          
+          # Update version in installer script
+          $content = Get-Content $installerPath -Raw
+          $content = $content -replace '!define APP_VERSION ".*"', "!define APP_VERSION `"$version`""
+          $content = $content -replace 'OutFile ".*"', "OutFile `"..\bin\TodoApp-$version-windows-amd64-installer.exe`""
+          Set-Content $installerPath $content
+          
+          # Run NSIS
+          & $nsisPath $installerPath
+
+      - name: Create portable package (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $portableDir = "build/portable-temp"
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+          Copy-Item "build/bin/TodoApp.exe" -Destination $portableDir
+          New-Item -ItemType File -Path "$portableDir/portable.txt" | Out-Null
+          
+          $zipName = "TodoApp-$version-windows-amd64-portable.zip"
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "build/bin/$zipName" -Force
+
+      - name: Create installer (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          chmod +x build/linux/create-appimage.sh
+          # The script reads version from frontend/package.json which we updated
+          ARCH=amd64 ./build/linux/create-appimage.sh
+
+      - name: Create portable package (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          PORTABLE_DIR="build/portable-temp"
+          mkdir -p "$PORTABLE_DIR"
+          cp build/bin/TodoApp "$PORTABLE_DIR/"
+          touch "$PORTABLE_DIR/portable.txt"
+          
+          tar -czf "build/bin/TodoApp-${VERSION}-linux-amd64-portable.tar.gz" -C "$PORTABLE_DIR" .
+
+      - name: Create installer (macOS)
+        if: matrix.platform == 'darwin'
+        run: |
+          chmod +x build/darwin/create-dmg.sh
+          # Pass version explicitly
+          ./build/darwin/create-dmg.sh "${{ needs.create-release.outputs.version }}"
+
+      - name: Create portable package (macOS)
+        if: matrix.platform == 'darwin'
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          PORTABLE_DIR="build/portable-temp"
+          mkdir -p "$PORTABLE_DIR"
+          
+          # Find the app bundle
+          APP_PATH=$(find build/bin -maxdepth 1 -name "*.app" | head -n 1)
+          cp -R "$APP_PATH" "$PORTABLE_DIR/"
+          touch "$PORTABLE_DIR/portable.txt"
+          
+          cd "$PORTABLE_DIR"
+          zip -r "../../build/bin/TodoApp-${VERSION}-darwin-universal-portable.zip" *
+
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.tag }}
           files: |
-            build/bin/*.AppImage
-            build/bin/*.dmg
-            build/bin/*-installer.exe
-            build/bin/*.zip
-            build/bin/*.tar.gz
+            build/bin/TodoApp-*-installer.exe
+            build/bin/TodoApp-*-portable.zip
+            build/bin/TodoApp-*-linux-*.AppImage
+            build/bin/TodoApp-*-linux-*-portable.tar.gz
+            build/bin/TodoApp-*-darwin-*.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
-          fail_on_unmatched_files: false
