@@ -26,6 +26,7 @@ const newTodoDescription = ref('')
 const newTodoPriority = ref('medium')
 const newTodoDueDate = ref(getDefaultDueDate())
 const newTodoTags = ref('')
+const showAddModal = ref(false)
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
@@ -56,6 +57,7 @@ const handleAddTodo = async () => {
   newTodoPriority.value = 'medium'
   newTodoDueDate.value = getDefaultDueDate()
   newTodoTags.value = ''
+  showAddModal.value = false
 }
 
 const startEdit = (todo: Todo) => {
@@ -163,34 +165,15 @@ const formatDate = (dateStr: string | null) => {
         </button>
       </header>
 
-      <!-- Input -->
-      <div class="p-6 border-b border-gray-200 dark:border-gray-700 space-y-4">
-        <div class="space-y-2">
-            <input
-                v-model="newTodoTitle"
-                @keyup.enter="handleAddTodo"
-                type="text"
-                :placeholder="t('placeholder')"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-            <textarea
-                v-model="newTodoDescription"
-                :placeholder="t('description')"
-                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm resize-none h-20"
-            ></textarea>
-        </div>
-          <div class="flex flex-wrap gap-4 items-center">
-              <BaseSelect v-model="newTodoPriority" :options="priorityOptions" />
-              <input type="datetime-local" v-model="newTodoDueDate" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px]" />
-              <input type="text" v-model="newTodoTags" :placeholder="t('tags')" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 h-[42px] flex-1 min-w-[150px]" />
-              <button
-                @click="handleAddTodo"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ml-auto h-[42px]"
-              >
-                <PhPlus weight="bold" />
-                {{ t('add') }}
-              </button>
-          </div>
+      <!-- Add Button -->
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <button
+            @click="showAddModal = true"
+            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        >
+            <PhPlus weight="bold" size="20" />
+            {{ t('add') }}
+        </button>
       </div>
 
       <!-- Filters -->
@@ -273,6 +256,41 @@ const formatDate = (dateStr: string | null) => {
       </div>
     </div>
     
+    <!-- Add Modal -->
+    <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 class="text-xl font-bold mb-4">{{ t('add') }}</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Title</label>
+                    <input v-model="newTodoTitle" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" :placeholder="t('placeholder')" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">{{ t('description') }}</label>
+                    <textarea v-model="newTodoDescription" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none" :placeholder="t('description')"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                         <label class="block text-sm font-medium mb-1">{{ t('priority') }}</label>
+                         <BaseSelect v-model="newTodoPriority" :options="priorityOptions" class="w-full" />
+                    </div>
+                    <div class="flex-1">
+                         <label class="block text-sm font-medium mb-1">{{ t('due_date') }}</label>
+                         <input type="datetime-local" v-model="newTodoDueDate" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700" />
+                    </div>
+                </div>
+                <div>
+                     <label class="block text-sm font-medium mb-1">{{ t('tags_label') }}</label>
+                     <input v-model="newTodoTags" type="text" :placeholder="t('tags')" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button @click="showAddModal = false" class="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors">{{ t('cancel') }}</button>
+                    <button @click="handleAddTodo" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors">{{ t('add') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Modal -->
     <div v-if="editingTodo" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
