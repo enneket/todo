@@ -46,7 +46,7 @@ onMounted(() => {
 
 const handleAddTodo = async () => {
   if (!newTodoTitle.value.trim()) return
-  let dateToSend = newTodoDueDate.value ? new Date(newTodoDueDate.value).toISOString() : ''
+  const dateToSend = newTodoDueDate.value ? new Date(newTodoDueDate.value).toISOString() : ''
   
   // Parse tags: comma separated
   const tags = newTodoTags.value.split(',').map(t => t.trim()).filter(t => t)
@@ -89,13 +89,13 @@ const saveEdit = async () => {
   if (!editingTodo.value) return
   if (!editForm.value.title.trim()) return
 
-  let dateToSend = editForm.value.due_date ? new Date(editForm.value.due_date).toISOString() : ''
+  const dateToSend = editForm.value.due_date ? new Date(editForm.value.due_date).toISOString() : ''
   const tags = editForm.value.tags.split(',').map(t => t.trim()).filter(t => t)
   
   await todoStore.updateTodo(editingTodo.value.id, {
     title: editForm.value.title,
     description: editForm.value.description,
-    priority: editForm.value.priority as any,
+    priority: editForm.value.priority as 'high' | 'medium' | 'low',
     due_date: dateToSend,
     tags: tags
   })

@@ -42,7 +42,7 @@ export const useTodoStore = defineStore('todo', () => {
     try {
         // Ensure due_date is null if empty string
         if (updates.due_date === '') {
-            updates.due_date = null as any
+            updates.due_date = null
         }
       await axios.put(`${API_URL}/${id}`, updates)
       await fetchTodos()
