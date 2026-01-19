@@ -53,7 +53,7 @@ const getLabel = (val: string) => {
     <button
       @click="toggle"
       type="button"
-      class="inline-flex w-full justify-between items-center gap-x-1.5 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-200 transition-colors h-[42px] focus:outline-none focus:ring-2 focus:ring-primary-100"
+      class="inline-flex w-full justify-between items-center gap-x-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-white shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors h-[42px] focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
     >
       {{ getLabel(modelValue) }}
       <PhCaretDown class="-mr-1 h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -69,14 +69,14 @@ const getLabel = (val: string) => {
     >
       <div
         v-if="isOpen"
-        class="absolute right-0 z-50 mt-2 w-full origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
+        class="absolute right-0 z-50 mt-2 w-full origin-top-right rounded-xl bg-white dark:bg-slate-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
       >
         <div class="py-1">
           <button
             v-for="opt in options"
             :key="opt.value"
             @click="select(opt.value)"
-            class="group flex w-full items-center justify-between px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-primary-600 transition-colors"
+            class="group flex w-full items-center justify-between px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
           >
             {{ opt.label }}
             <PhCheck v-if="modelValue === opt.value" class="h-4 w-4 text-primary-500" />

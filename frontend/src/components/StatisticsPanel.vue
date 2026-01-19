@@ -75,28 +75,28 @@ const barOptions = {
 </script>
 
 <template>
-  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-    <h2 class="text-xl font-bold font-display text-slate-800 mb-6 flex items-center gap-2">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+    <h2 class="text-xl font-bold font-display text-slate-800 dark:text-white mb-6 flex items-center gap-2">
         <PhChartPie weight="duotone" class="text-primary-500" />
         {{ t('statistics') }}
     </h2>
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-3 gap-4 mb-8">
-        <div class="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
+        <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 text-center">
             <div class="text-blue-500 mb-1 flex justify-center"><PhListBullets size="24" weight="duotone"/></div>
-            <div class="text-2xl font-bold text-slate-800">{{ totalTodos }}</div>
-            <div class="text-xs font-bold text-blue-600 uppercase tracking-wider">{{ t('total') }}</div>
+            <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ totalTodos }}</div>
+            <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{{ t('total') }}</div>
         </div>
-        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
+        <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 text-center">
             <div class="text-emerald-500 mb-1 flex justify-center"><PhCheckCircle size="24" weight="duotone"/></div>
-            <div class="text-2xl font-bold text-slate-800">{{ completedTodos }}</div>
-            <div class="text-xs font-bold text-emerald-600 uppercase tracking-wider">{{ t('completed') }}</div>
+            <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ completedTodos }}</div>
+            <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{{ t('completed') }}</div>
         </div>
-        <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-center">
+        <div class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 text-center">
             <div class="text-indigo-500 mb-1 flex justify-center"><PhTrendUp size="24" weight="duotone"/></div>
-            <div class="text-2xl font-bold text-slate-800">{{ completionRate }}%</div>
-            <div class="text-xs font-bold text-indigo-600 uppercase tracking-wider">{{ t('rate') }}</div>
+            <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ completionRate }}%</div>
+            <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{{ t('rate') }}</div>
         </div>
     </div>
 
