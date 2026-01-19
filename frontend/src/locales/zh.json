@@ -17,5 +17,6 @@
   "search": "搜索...",
   "description": "描述",
   "tags": "标签（用逗号分隔）",
-  "tags_label": "标签"
+  "tags_label": "标签",
+  "modal_title": "标题"
 }
