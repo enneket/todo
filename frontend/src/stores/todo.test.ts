@@ -17,7 +17,7 @@ describe('Todo Store', () => {
       { id: 1, title: 'Test Todo', completed: false, priority: 'medium', due_date: null, tags: [], project_id: null, subtasks: [], created_at: '' }
     ]
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: mockTodos })
 
     await store.fetchTodos()
@@ -29,9 +29,9 @@ describe('Todo Store', () => {
   it('adds a todo successfully', async () => {
     const store = useTodoStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.post.mockResolvedValue({ data: { id: 1 } })
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [{ id: 1, title: 'New Todo' }] })
 
     await store.addTodo('New Todo')
@@ -43,9 +43,9 @@ describe('Todo Store', () => {
   it('updates a todo successfully', async () => {
     const store = useTodoStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.put.mockResolvedValue({})
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [] })
 
     await store.updateTodo(1, { completed: true })
@@ -56,9 +56,9 @@ describe('Todo Store', () => {
   it('deletes a todo successfully', async () => {
     const store = useTodoStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.delete.mockResolvedValue({})
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [] })
 
     await store.deleteTodo(1)

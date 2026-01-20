@@ -104,7 +104,7 @@ const openAddModal = () => {
     repeat: '',
     tags: '',
     project_id: currentProjectId.value && currentProjectId.value > 0 ? currentProjectId.value : -1
-  } as any // Use any to bypass strict type check for now
+  }
   newSubtaskTitle.value = ''
   showModal.value = true
 }
@@ -136,7 +136,7 @@ const openEditModal = (todo: Todo) => {
     repeat: todo.repeat || '',
     tags: todo.tags ? todo.tags.join(', ') : '',
     project_id: todo.project_id || -1
-  } as any
+  }
   showModal.value = true
 }
 
@@ -158,7 +158,7 @@ const handleSubmit = async () => {
         repeat: form.value.repeat,
         tags: tags,
         project_id: projectId
-      } as any)
+      })
   } else {
       await todoStore.addTodo(
         form.value.title, 

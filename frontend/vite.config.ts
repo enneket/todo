@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, type UserConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import istanbul from 'vite-plugin-istanbul'
@@ -17,4 +18,5 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
   },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as UserConfig & { test: any })

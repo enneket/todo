@@ -17,7 +17,7 @@ describe('Project Store', () => {
       { id: 1, name: 'Work', description: '', color: '#000', created_at: '' }
     ]
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: mockProjects })
 
     await store.fetchProjects()
@@ -29,9 +29,9 @@ describe('Project Store', () => {
   it('adds a project successfully', async () => {
     const store = useProjectStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.post.mockResolvedValue({ data: { id: 1 } })
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [{ id: 1, name: 'New Project' }] })
 
     await store.addProject('New Project')
@@ -43,9 +43,9 @@ describe('Project Store', () => {
   it('updates a project successfully', async () => {
     const store = useProjectStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.put.mockResolvedValue({})
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [] })
 
     await store.updateProject(1, { name: 'Updated' })
@@ -56,9 +56,9 @@ describe('Project Store', () => {
   it('deletes a project successfully', async () => {
     const store = useProjectStore()
     
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.delete.mockResolvedValue({})
-    // @ts-ignore
+    // @ts-expect-error -- Mocking axios
     axios.get.mockResolvedValue({ data: [] })
 
     await store.deleteProject(1)
