@@ -25,6 +25,8 @@ func setupTestDB(t *testing.T) {
 		completed BOOLEAN DEFAULT FALSE,
 		priority TEXT DEFAULT 'medium',
 		due_date DATETIME,
+		remind_at DATETIME,
+		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -115,7 +117,7 @@ func TestTodoService(t *testing.T) {
 
 	// Test CreateTodo
 	now := time.Now()
-	id, err := CreateTodo("Buy Milk", "Groceries", "high", &now, []string{"shopping"}, &projIDInt)
+	id, err := CreateTodo("Buy Milk", "Groceries", "high", &now, nil, "", []string{"shopping"}, &projIDInt)
 	if err != nil {
 		t.Fatalf("CreateTodo failed: %v", err)
 	}
@@ -146,7 +148,7 @@ func TestTodoService(t *testing.T) {
 	}
 
 	// Test UpdateTodoDetails
-	err = UpdateTodoDetails(int(id), "Buy Almond Milk", "Updated desc", "low", nil, []string{"food"}, nil)
+	err = UpdateTodoDetails(int(id), "Buy Almond Milk", "Updated desc", "low", nil, nil, "", []string{"food"}, nil)
 	if err != nil {
 		t.Fatalf("UpdateTodoDetails failed: %v", err)
 	}
@@ -166,12 +168,70 @@ func TestTodoService(t *testing.T) {
 	}
 }
 
+func TestTodoRepeat(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	now := time.Now()
+	// Create todo with daily repeat
+	id, err := CreateTodo("Repeat Task", "", "high", &now, nil, "daily", nil, nil)
+	if err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// Complete the task
+	err = UpdateTodoStatus(int(id), true)
+	if err != nil {
+		t.Fatalf("UpdateTodoStatus failed: %v", err)
+	}
+
+	todos, err := GetTodos()
+	// Should have 2 todos now: one completed (original), one pending (new)
+	if len(todos) != 2 {
+		t.Fatalf("Expected 2 todos, got %d", len(todos))
+	}
+
+	var newTodo, oldTodo db.Todo
+	foundOld := false
+	foundNew := false
+
+	for _, todo := range todos {
+		if todo.ID == int(id) {
+			oldTodo = todo
+			foundOld = true
+		} else {
+			newTodo = todo
+			foundNew = true
+		}
+	}
+
+	if !foundOld || !foundNew {
+		t.Fatalf("Could not distinguish old and new todos. IDs: %d, %d", todos[0].ID, todos[1].ID)
+	}
+
+	if !oldTodo.Completed {
+		t.Error("Original todo should be completed")
+	}
+	if newTodo.Completed {
+		t.Error("New todo should be pending")
+	}
+	if newTodo.Title != "Repeat Task" {
+		t.Errorf("New todo title mismatch: %s", newTodo.Title)
+	}
+	// Check due date: should be +1 day
+	// Note: time comparisons can be tricky with nanoseconds, so we compare year/day
+	expected := now.AddDate(0, 0, 1)
+	if newTodo.DueDate == nil || newTodo.DueDate.Year() != expected.Year() || newTodo.DueDate.YearDay() != expected.YearDay() {
+		t.Errorf("New todo due date incorrect. Expected ~%v, got %v", expected, newTodo.DueDate)
+	}
+}
+
 func TestSubtaskService(t *testing.T) {
 	setupTestDB(t)
 	defer db.DB.Close()
 
 	// Create a todo first
-	todoID, _ := CreateTodo("Main Task", "", "medium", nil, nil, nil)
+	todoID, _ := CreateTodo("Main Task", "", "medium", nil, nil, "", nil, nil)
 	todoIDInt := int(todoID)
 
 	// Test CreateSubtask

@@ -6,6 +6,7 @@ import (
 	"log"
 	"todo/backend/db"
 	"todo/backend/server"
+	"todo/backend/service"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -24,6 +25,10 @@ func main() {
 	// Start HTTP Server
 	// Use a fixed port for now, e.g., 8081
 	server.StartServer("8081")
+	
+	// Start Notification Scheduler
+	service.StartNotificationScheduler()
+
 	defer server.StopServer(context.Background())
 
 	// Create an instance of the app structure

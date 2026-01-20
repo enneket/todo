@@ -27,6 +27,8 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		Description string     `json:"description"`
 		Priority    string     `json:"priority"`
 		DueDate     *time.Time `json:"due_date"`
+		RemindAt    *time.Time `json:"remind_at"`
+		Repeat      string     `json:"repeat"`
 		Tags        []string   `json:"tags"`
 		ProjectID   *int       `json:"project_id"`
 	}
@@ -34,7 +36,7 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate, req.Tags, req.ProjectID)
+	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate, req.RemindAt, req.Repeat, req.Tags, req.ProjectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,6 +54,8 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		Description *string    `json:"description"`
 		Priority    *string    `json:"priority"`
 		DueDate     *time.Time `json:"due_date"`
+		RemindAt    *time.Time `json:"remind_at"`
+		Repeat      *string    `json:"repeat"`
 		Tags        []string   `json:"tags"`
 		ProjectID   *int       `json:"project_id"`
 	}
@@ -76,11 +80,15 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		if req.Description != nil {
 			description = *req.Description
 		}
+		repeat := ""
+		if req.Repeat != nil {
+			repeat = *req.Repeat
+		}
 		tags := []string{}
 		if req.Tags != nil {
 			tags = req.Tags
 		}
-		if err := service.UpdateTodoDetails(id, *req.Title, description, priority, req.DueDate, tags, req.ProjectID); err != nil {
+		if err := service.UpdateTodoDetails(id, *req.Title, description, priority, req.DueDate, req.RemindAt, repeat, tags, req.ProjectID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

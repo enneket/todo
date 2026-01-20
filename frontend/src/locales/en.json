@@ -39,5 +39,12 @@
   "add_subtask": "Add subtask...",
   "delete": "Delete",
   "mark_complete": "Mark as completed",
-  "mark_incomplete": "Mark as incomplete"
+  "mark_incomplete": "Mark as incomplete",
+  "remind_at": "Remind At",
+  "repeat": "Repeat",
+  "repeat_none": "No Repeat",
+  "repeat_daily": "Daily",
+  "repeat_weekly": "Weekly",
+  "repeat_monthly": "Monthly",
+  "repeat_weekdays": "Weekdays"
 }

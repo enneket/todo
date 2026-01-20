@@ -17,6 +17,8 @@ export interface Todo {
   completed: boolean
   priority: 'high' | 'medium' | 'low'
   due_date: string | null
+  remind_at: string | null
+  repeat: string
   tags: string[]
   project_id: number | null
   subtasks: Subtask[]
@@ -38,11 +40,12 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '', tags: string[] = [], projectId: number | null = null) => {
+  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '', tags: string[] = [], projectId: number | null = null, remindAt: string | null = null, repeat: string = '') => {
     try {
       // If dueDate is empty string, send null
       const dateToSend = dueDate === '' ? null : dueDate
-      await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags, project_id: projectId })
+      const remindToSend = remindAt === '' ? null : remindAt
+      await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags, project_id: projectId, remind_at: remindToSend, repeat })
       await fetchTodos()
     } catch (error) {
       console.error('Failed to add todo:', error)

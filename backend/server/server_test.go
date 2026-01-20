@@ -26,6 +26,8 @@ func setupTestDB(t *testing.T) {
 		completed BOOLEAN DEFAULT FALSE,
 		priority TEXT DEFAULT 'medium',
 		due_date DATETIME,
+		remind_at DATETIME,
+		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP

@@ -25,6 +25,8 @@ type Todo struct {
 	Completed   bool      `json:"completed"`
 	Priority    string    `json:"priority"`
 	DueDate     *time.Time `json:"due_date"`
+	RemindAt    *time.Time `json:"remind_at"`
+	Repeat      string    `json:"repeat"`
 	Tags        []string  `json:"tags"`
 	ProjectID   *int      `json:"project_id"` // Nullable
 	Subtasks    []Subtask `json:"subtasks,omitempty"` // For API response
