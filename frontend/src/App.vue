@@ -209,9 +209,9 @@ const toggleLanguage = () => {
 
 const getPriorityColor = (p: string) => {
   switch (p) {
-    case 'high': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50'
-    case 'medium': return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50'
-    case 'low': return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50'
+    case 'high': return 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50'
+    case 'medium': return 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50'
+    case 'low': return 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50'
     default: return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700'
   }
 }
@@ -232,11 +232,11 @@ const getDueDateStatus = (dateStr: string | null, completed: boolean) => {
     const hours = diff / (1000 * 60 * 60)
     
     if (diff < 0) {
-        return { status: 'overdue', label: 'overdue', color: 'text-red-500 dark:text-red-400 font-bold' }
+        return { status: 'overdue', label: 'overdue', color: 'text-red-600 dark:text-red-400 font-bold' }
     } else if (hours <= 24) {
-        return { status: 'soon', label: 'due_soon', color: 'text-orange-500 dark:text-orange-400 font-medium' }
+        return { status: 'soon', label: 'due_soon', color: 'text-orange-600 dark:text-orange-400 font-medium' }
     }
-    return { status: 'future', label: '', color: 'text-slate-400 dark:text-slate-500' }
+    return { status: 'future', label: '', color: 'text-slate-500 dark:text-slate-500' }
 }
 
 const currentTodoSubtasks = computed(() => {
@@ -281,8 +281,8 @@ const currentTodoSubtasks = computed(() => {
 
         <div class="mt-8">
           <div class="flex items-center justify-between px-3 mb-2">
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('projects') || 'Projects' }}</h3>
-            <button @click="showProjectModal = true" class="text-slate-400 hover:text-primary-500 transition-colors">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('projects') || 'Projects' }}</h3>
+            <button @click="showProjectModal = true" class="text-slate-500 hover:text-primary-500 transition-colors" :aria-label="t('add_project') || 'Add Project'">
               <PhPlus size="14" weight="bold" />
             </button>
           </div>
@@ -298,7 +298,7 @@ const currentTodoSubtasks = computed(() => {
                 <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: project.color }"></span>
                 {{ project.name }}
               </div>
-              <button @click.stop="deleteProject(project.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500">
+              <button @click.stop="deleteProject(project.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500" :aria-label="t('delete') || 'Delete'">
                 <PhX size="14" />
               </button>
             </div>
@@ -322,18 +322,20 @@ const currentTodoSubtasks = computed(() => {
           
           <div class="flex items-center gap-3">
               <div class="relative group">
-                  <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors" size="18" />
+                  <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-600 transition-colors" size="18" />
                   <input
                       v-model="searchQuery"
                       type="text"
                       :placeholder="t('search')"
-                      class="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 focus:border-primary-500 w-40 focus:w-64 transition-all shadow-sm dark:text-white dark:placeholder-slate-500"
+                      :aria-label="t('search') || 'Search'"
+                      class="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 focus:border-primary-500 w-40 focus:w-64 transition-all shadow-sm dark:text-white dark:placeholder-slate-500 text-slate-700"
                   />
               </div>
               <button
                 @click="themeStore.toggleTheme()"
-                class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
+                class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
                 :title="themeStore.theme"
+                :aria-label="t('theme_toggle') || 'Toggle Theme'"
               >
                 <PhSun v-if="themeStore.theme === 'light'" size="24" />
                 <PhMoon v-else-if="themeStore.theme === 'dark'" size="24" />
@@ -341,16 +343,18 @@ const currentTodoSubtasks = computed(() => {
               </button>
               <button
                 @click="showStats = !showStats"
-                class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
+                class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
                 :title="t('statistics')"
-                :class="{ 'text-primary-500 bg-white dark:bg-slate-900 shadow-sm': showStats }"
+                :aria-label="t('statistics') || 'Statistics'"
+                :class="{ 'text-primary-600 bg-white dark:bg-slate-900 shadow-sm': showStats }"
               >
                 <PhChartBar size="24" />
               </button>
               <button
                 @click="toggleLanguage"
-                class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
+                class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
                 :title="t('language')"
+                :aria-label="t('language') || 'Language'"
               >
                 <PhTranslate size="24" />
               </button>
@@ -408,19 +412,20 @@ const currentTodoSubtasks = computed(() => {
               <!-- Completion Check -->
               <div class="flex items-start gap-4">
                   <button
-                      @click="todoStore.updateTodo(todo.id, { completed: !todo.completed })"
-                      class="mt-1 text-slate-300 dark:text-slate-600 hover:text-primary-500 transition-colors flex-shrink-0"
-                  >
-                      <PhCheckCircle v-if="todo.completed" weight="fill" class="text-emerald-500 scale-110" size="24" />
-                      <PhCircle v-else weight="bold" size="24" />
-                  </button>
+                          @click="todoStore.updateTodo(todo.id, { completed: !todo.completed })"
+                          class="mt-1 text-slate-400 dark:text-slate-600 hover:text-primary-500 transition-colors flex-shrink-0"
+                          :aria-label="todo.completed ? t('mark_incomplete') : t('mark_complete')"
+                      >
+                          <PhCheckCircle v-if="todo.completed" weight="fill" class="text-emerald-500 scale-110" size="24" />
+                          <PhCircle v-else weight="bold" size="24" />
+                      </button>
 
                   <div class="flex-1 min-w-0">
                       <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                          <span :class="['text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md', getPriorityColor(todo.priority)]">
+                          <span :class="['text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md', getPriorityColor(todo.priority || 'medium')]">
                               {{ t('priority_' + (todo.priority || 'medium')) }}
                           </span>
-                          <span v-if="todo.project_id" class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                          <span v-if="todo.project_id" class="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 flex items-center gap-1">
                              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: projectStore.projects.find(p => p.id === todo.project_id)?.color }"></span>
                              {{ projectStore.projects.find(p => p.id === todo.project_id)?.name }}
                           </span>
@@ -446,13 +451,13 @@ const currentTodoSubtasks = computed(() => {
                           {{ todo.title }}
                       </h3>
                       
-                      <p v-if="todo.description" class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                      <p v-if="todo.description" class="text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
                           {{ todo.description }}
                       </p>
                       
                       <!-- Subtasks Preview -->
                       <div v-if="todo.subtasks && todo.subtasks.length > 0" class="mt-3 space-y-1">
-                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
                           <PhCheckSquare weight="bold" />
                           <span>{{ todo.subtasks.filter(s => s.completed).length }}/{{ todo.subtasks.length }}</span>
                         </div>
@@ -468,12 +473,14 @@ const currentTodoSubtasks = computed(() => {
                           @click="openEditModal(todo)"
                           class="p-2 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-all"
                           :title="t('edit')"
+                          :aria-label="t('edit') || 'Edit'"
                       >
                           <PhPencil size="18" weight="bold" />
                       </button>
                       <button
                           @click="todoStore.deleteTodo(todo.id)"
                           class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
+                          :aria-label="t('delete') || 'Delete'"
                       >
                           <PhTrash size="18" weight="bold" />
                       </button>
@@ -507,7 +514,7 @@ const currentTodoSubtasks = computed(() => {
             <div class="p-6 space-y-5 overflow-y-auto">
                 <!-- Title -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('modal_title') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('modal_title') }}</label>
                     <input 
                         v-model="form.title" 
                         type="text" 
@@ -519,7 +526,7 @@ const currentTodoSubtasks = computed(() => {
                 
                 <!-- Description -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('description') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('description') }}</label>
                     <textarea 
                         v-model="form.description" 
                         class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white placeholder-slate-400 resize-none h-24 transition-shadow" 
@@ -530,11 +537,11 @@ const currentTodoSubtasks = computed(() => {
                 <!-- Metadata Row -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('priority') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('priority') }}</label>
                          <BaseSelect v-model="form.priority" :options="priorityOptions" class="w-full" />
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('due_date') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('due_date') }}</label>
                          <input 
                             type="datetime-local" 
                             v-model="form.due_date" 
@@ -546,11 +553,11 @@ const currentTodoSubtasks = computed(() => {
                 <!-- Project & Tags -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('project') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('project') }}</label>
                          <BaseSelect v-model="form.project_id" :options="projectOptions" class="w-full" />
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('tags_label') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('tags_label') }}</label>
                          <input 
                             v-model="form.tags" 
                             type="text" 
@@ -562,7 +569,7 @@ const currentTodoSubtasks = computed(() => {
 
                 <!-- Subtasks (Only in Edit Mode) -->
                 <div v-if="isEditing">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{{ t('subtasks') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{{ t('subtasks') }}</label>
                     <div class="space-y-2 mb-3">
                       <div 
                         v-for="subtask in currentTodoSubtasks" 
@@ -629,7 +636,7 @@ const currentTodoSubtasks = computed(() => {
             </div>
             <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('name') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('name') }}</label>
                     <input 
                         v-model="projectForm.name" 
                         type="text" 
@@ -638,7 +645,7 @@ const currentTodoSubtasks = computed(() => {
                     />
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ t('color') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('color') }}</label>
                     <div class="flex gap-2 flex-wrap">
                       <button 
                         v-for="color in ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#64748B']"

@@ -36,5 +36,8 @@
   "confirm_delete_project": "确定要删除此项目吗？",
   "project": "所属项目",
   "subtasks": "子任务",
-  "add_subtask": "添加子任务..."
+  "add_subtask": "添加子任务...",
+  "delete": "删除",
+  "mark_complete": "标记为已完成",
+  "mark_incomplete": "标记为未完成"
 }

@@ -36,5 +36,8 @@
   "confirm_delete_project": "Delete this project?",
   "project": "Project",
   "subtasks": "Subtasks",
-  "add_subtask": "Add subtask..."
+  "add_subtask": "Add subtask...",
+  "delete": "Delete",
+  "mark_complete": "Mark as completed",
+  "mark_incomplete": "Mark as incomplete"
 }

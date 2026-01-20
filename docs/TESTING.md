@@ -2,15 +2,17 @@
 
 ## Backend Testing
 
-- **Unit Tests**: Located in `backend/service/service_test.go`.
-- **Framework**: Standard Go `testing` package with **In-Memory SQLite** (`:memory:`).
-- **Run Tests**: `go test -v ./backend/service` (or `make test`)
+- **Unit Tests**: Located in `backend/service/service_test.go` and `backend/server/server_test.go`.
+- **Framework**: Standard Go `testing` package with **In-Memory SQLite** (`:memory:`) and `httptest`.
+- **Run Tests**: `go test -v ./backend/...` (or `make test`)
+- **Run with Coverage**: `go test -coverprofile=coverage.out ./backend/... && go tool cover -func=coverage.out`
 
 ## Frontend Testing
 
-- **Unit Tests**: Located in `frontend/src/stores/*.test.ts`.
-- **Framework**: **Vitest** + **HappyDOM** + **Axios Mocking**.
+- **Unit Tests**: Located in `frontend/src/stores/*.test.ts` and `frontend/src/components/*.test.ts`.
+- **Framework**: **Vitest** + **HappyDOM** + **Axios Mocking** + **Vue Test Utils**.
 - **Run Tests**: `npm run test` (in frontend dir) or `make test` (from root).
+- **Run with Coverage**: `npm run test -- --coverage`
 
 ## Integration Testing
 
@@ -31,3 +33,26 @@ We use Cypress for End-to-End testing of the full application flow (Frontend + B
 
 ### Test Files
 - `frontend/cypress/e2e/todo.cy.ts`: Covers Todos (Add/Complete), Projects (Create/Filter), and basic navigation.
+
+## Test Coverage Reports (As of Latest Run)
+
+### Backend Coverage (Unit Tests)
+| Package | Coverage |
+|---------|----------|
+| `backend/service` | ~85% |
+| `backend/server` | ~38% |
+| **Total** | **~48%** |
+
+### Frontend Coverage (Unit Tests)
+| Category | Coverage |
+|----------|----------|
+| Components | ~87% |
+| Stores | ~69% |
+| **Total** | **~73%** |
+
+### E2E Coverage (Frontend)
+| Type | Coverage |
+|------|----------|
+| Lines | ~68% |
+| Statements | ~66% |
+| **Key Flows** | **100% Pass** |
