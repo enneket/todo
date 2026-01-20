@@ -621,7 +621,7 @@ const currentTodoSubtasks = computed(() => {
                             v-model="form.tags" 
                             type="text" 
                             :placeholder="t('tags')" 
-                            class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white placeholder-slate-400 transition-shadow" 
+                            class="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white placeholder-slate-400 transition-shadow text-sm h-[42px]" 
                         />
                     </div>
                 </div>
