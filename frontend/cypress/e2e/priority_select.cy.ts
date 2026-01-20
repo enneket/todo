@@ -3,10 +3,10 @@ describe('Priority Selector Test', () => {
     // Visit the app root
     cy.visit('/')
     // Ensure we are in English mode for testing
-    cy.get('h1').then(($h1) => {
-      if (!$h1.text().includes('Todo App')) {
-        cy.get('button[title="语言"]').click()
-        cy.contains('Todo App').should('be.visible')
+    cy.get('body').then(($body) => {
+      if ($body.text().includes('添加')) {
+         cy.get('button[title="语言"]').click()
+         cy.contains('Todo App').should('be.visible')
       }
     })
   })

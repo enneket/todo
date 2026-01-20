@@ -593,6 +593,22 @@ const currentTodoSubtasks = computed(() => {
                     </div>
                 </div>
 
+                <!-- Remind & Repeat -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('remind_at') }}</label>
+                         <input 
+                            type="datetime-local" 
+                            v-model="form.remind_at" 
+                            class="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white text-sm h-[42px] dark:[color-scheme:dark]" 
+                        />
+                    </div>
+                    <div>
+                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('repeat') }}</label>
+                         <BaseSelect v-model="form.repeat" :options="repeatOptions" class="w-full" />
+                    </div>
+                </div>
+
                 <!-- Project & Tags -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
