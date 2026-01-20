@@ -12,7 +12,8 @@ import {
 } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
-import { useTodoFilter } from './composables/useTodoFilter'
+import CalendarView from './components/CalendarView.vue'
+import { useTodoFilter, type ViewType } from './composables/useTodoFilter'
 
 const { t, locale } = useI18n()
 const todoStore = useTodoStore()
@@ -74,7 +75,7 @@ const isEditing = computed(() => !!form.value.id)
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
-const currentView = ref<'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project'>('all')
+const currentView = ref<ViewType>('all')
 const currentProjectId = ref<number | null>(null)
 const sortOption = ref<'created_desc' | 'due_asc' | 'due_desc' | 'priority_desc'>('created_desc')
 const showSortMenu = ref(false)
@@ -85,6 +86,7 @@ const currentProjectName = computed(() => {
   if (currentView.value === 'today') return t('today')
   if (currentView.value === 'upcoming') return t('upcoming')
   if (currentView.value === 'overdue') return t('overdue')
+  if (currentView.value === 'calendar') return t('calendar')
   
   if (currentView.value === 'project' && currentProjectId.value) {
       const p = projectStore.projects.find(p => p.id === currentProjectId.value)
@@ -335,6 +337,14 @@ const currentTodoSubtasks = computed(() => {
             <PhWarningCircle size="18" />
             {{ t('overdue') || 'Overdue' }}
           </button>
+          <button 
+            @click="currentView = 'calendar'; currentProjectId = null"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'calendar' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhCalendar size="18" />
+            {{ t('calendar') || 'Calendar' }}
+          </button>
         </nav>
 
         <div class="mt-8">
@@ -367,7 +377,7 @@ const currentTodoSubtasks = computed(() => {
 
     <!-- Main Content -->
     <main class="flex-1 min-w-0 h-screen overflow-y-auto p-6 md:p-12">
-      <div class="max-w-3xl mx-auto space-y-8">
+      <div :class="['mx-auto space-y-8 transition-all', currentView === 'calendar' ? 'max-w-6xl h-[calc(100vh-6rem)] flex flex-col' : 'max-w-3xl']">
         
         <!-- Header -->
         <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -456,9 +466,16 @@ const currentTodoSubtasks = computed(() => {
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-4"
         >
-          <StatisticsPanel v-if="showStats" />
+          <StatisticsPanel v-if="showStats && currentView !== 'calendar'" />
         </transition>
 
+        <CalendarView 
+          v-if="currentView === 'calendar'" 
+          class="flex-1 min-h-0 shadow-sm"
+          @edit-task="openEditModal"
+        />
+
+        <div v-else class="space-y-8">
         <!-- Add Button (Hero) -->
         <button
           @click="openAddModal"
@@ -588,6 +605,7 @@ const currentTodoSubtasks = computed(() => {
               </div>
               <p class="text-slate-400 dark:text-slate-500 font-medium">{{ t('no_tasks') || 'No tasks found' }}</p>
           </div>
+        </div>
         </div>
       </div>
     </main>
