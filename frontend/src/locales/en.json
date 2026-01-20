@@ -48,5 +48,11 @@
   "repeat_daily": "Daily",
   "repeat_weekly": "Weekly",
   "repeat_monthly": "Monthly",
-  "repeat_weekdays": "Weekdays"
+  "repeat_weekdays": "Weekdays",
+  "sort_by": "Sort by",
+  "sort_created": "Date Created",
+  "sort_due_date": "Due Date",
+  "sort_priority": "Priority",
+  "ascending": "Ascending",
+  "descending": "Descending"
 }

@@ -48,5 +48,11 @@
   "repeat_daily": "每天",
   "repeat_weekly": "每周",
   "repeat_monthly": "每月",
-  "repeat_weekdays": "工作日"
+  "repeat_weekdays": "工作日",
+  "sort_by": "排序方式",
+  "sort_created": "创建时间",
+  "sort_due_date": "截止日期",
+  "sort_priority": "优先级",
+  "ascending": "升序",
+  "descending": "降序"
 }

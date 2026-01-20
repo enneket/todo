@@ -8,10 +8,11 @@ import {
   PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, 
   PhClock, PhMagnifyingGlass, PhWarning, PhChartBar, PhSun, PhMoon, 
   PhDesktop, PhList, PhFolder, PhCheckSquare, PhX, PhBell, PhArrowsClockwise,
-  PhCalendar, PhCalendarCheck, PhWarningCircle
+  PhCalendar, PhCalendarCheck, PhWarningCircle, PhSortAscending, PhSortDescending
 } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
+import { useTodoFilter } from './composables/useTodoFilter'
 
 const { t, locale } = useI18n()
 const todoStore = useTodoStore()
@@ -75,6 +76,8 @@ const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
 const currentView = ref<'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project'>('all')
 const currentProjectId = ref<number | null>(null)
+const sortOption = ref<'created_desc' | 'due_asc' | 'due_desc' | 'priority_desc'>('created_desc')
+const showSortMenu = ref(false)
 
 const currentProjectName = computed(() => {
   if (currentView.value === 'all') return t('all_tasks')
@@ -212,51 +215,14 @@ const deleteSubtask = async (id: number) => {
   await todoStore.deleteSubtask(id)
 }
 
-const filteredTodos = computed(() => {
-  let items = todoStore.todos
-  
-  // View filtering
-  if (currentView.value === 'inbox') {
-    items = items.filter(t => t.project_id === null)
-  } else if (currentView.value === 'project' && currentProjectId.value) {
-    items = items.filter(t => t.project_id === currentProjectId.value)
-  } else if (currentView.value === 'today') {
-      const now = new Date()
-      items = items.filter(t => {
-          if (!t.due_date) return false
-          const d = new Date(t.due_date)
-          return d.getDate() === now.getDate() && 
-                 d.getMonth() === now.getMonth() && 
-                 d.getFullYear() === now.getFullYear()
-      })
-  } else if (currentView.value === 'upcoming') {
-      const now = new Date()
-      const nextWeek = new Date()
-      nextWeek.setDate(now.getDate() + 7)
-      items = items.filter(t => {
-          if (!t.due_date) return false
-          const d = new Date(t.due_date)
-          return d >= now && d <= nextWeek
-      })
-  } else if (currentView.value === 'overdue') {
-      const now = new Date()
-      items = items.filter(t => !t.completed && t.due_date && new Date(t.due_date) < now)
-  }
-
-  // Search filter
-  if (searchQuery.value.trim()) {
-      const q = searchQuery.value.toLowerCase()
-      items = items.filter(t => 
-        t.title.toLowerCase().includes(q) || 
-        (t.description && t.description.toLowerCase().includes(q)) ||
-        (t.tags && t.tags.some(tag => tag.toLowerCase().includes(q)))
-      )
-  }
-
-  if (filter.value === 'active') return items.filter((t) => !t.completed)
-  if (filter.value === 'completed') return items.filter((t) => t.completed)
-  return items
-})
+const filteredTodos = useTodoFilter(
+  computed(() => todoStore.todos),
+  currentView,
+  currentProjectId,
+  searchQuery,
+  sortOption,
+  filter
+)
 
 const toggleLanguage = () => {
   locale.value = locale.value === 'en' ? 'zh' : 'en'
@@ -423,6 +389,34 @@ const currentTodoSubtasks = computed(() => {
                       class="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 focus:border-primary-500 w-40 focus:w-64 transition-all shadow-sm dark:text-white dark:placeholder-slate-500 text-slate-700"
                   />
               </div>
+              <button
+                @click="showSortMenu = !showSortMenu"
+                class="relative p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
+                :aria-label="t('sort_by')"
+              >
+                <PhSortAscending v-if="sortOption === 'due_asc'" size="24" />
+                <PhSortDescending v-else size="24" />
+                
+                <!-- Sort Menu -->
+                <div v-if="showSortMenu" class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 overflow-hidden">
+                    <button @click="sortOption = 'created_desc'; showSortMenu = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between" :class="sortOption === 'created_desc' ? 'text-primary-600 font-medium' : 'text-slate-600 dark:text-slate-400'">
+                        {{ t('sort_created') }}
+                        <PhCheckCircle v-if="sortOption === 'created_desc'" weight="fill" size="16" />
+                    </button>
+                    <button @click="sortOption = 'due_asc'; showSortMenu = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between" :class="sortOption === 'due_asc' ? 'text-primary-600 font-medium' : 'text-slate-600 dark:text-slate-400'">
+                        {{ t('sort_due_date') }} ({{ t('ascending') }})
+                        <PhCheckCircle v-if="sortOption === 'due_asc'" weight="fill" size="16" />
+                    </button>
+                    <button @click="sortOption = 'due_desc'; showSortMenu = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between" :class="sortOption === 'due_desc' ? 'text-primary-600 font-medium' : 'text-slate-600 dark:text-slate-400'">
+                        {{ t('sort_due_date') }} ({{ t('descending') }})
+                        <PhCheckCircle v-if="sortOption === 'due_desc'" weight="fill" size="16" />
+                    </button>
+                    <button @click="sortOption = 'priority_desc'; showSortMenu = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between" :class="sortOption === 'priority_desc' ? 'text-primary-600 font-medium' : 'text-slate-600 dark:text-slate-400'">
+                        {{ t('sort_priority') }}
+                        <PhCheckCircle v-if="sortOption === 'priority_desc'" weight="fill" size="16" />
+                    </button>
+                </div>
+              </button>
               <button
                 @click="themeStore.toggleTheme()"
                 class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
