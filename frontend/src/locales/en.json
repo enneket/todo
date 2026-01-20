@@ -19,6 +19,8 @@
   "tags": "Tags (comma separated)",
   "tags_label": "Tags",
   "modal_title": "Title",
+  "today": "Today",
+  "upcoming": "Upcoming",
   "overdue": "Overdue",
   "due_soon": "Due Soon",
   "no_tasks": "No tasks found",

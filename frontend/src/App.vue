@@ -7,7 +7,8 @@ import { useProjectStore } from './stores/project'
 import { 
   PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, 
   PhClock, PhMagnifyingGlass, PhWarning, PhChartBar, PhSun, PhMoon, 
-  PhDesktop, PhList, PhFolder, PhCheckSquare, PhX, PhBell, PhArrowsClockwise
+  PhDesktop, PhList, PhFolder, PhCheckSquare, PhX, PhBell, PhArrowsClockwise,
+  PhCalendar, PhCalendarCheck, PhWarningCircle
 } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
@@ -72,17 +73,21 @@ const isEditing = computed(() => !!form.value.id)
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
-const currentProjectId = ref<number | null>(null) // null means "All Tasks" view, -1 means "Inbox" view if we want to separate?
-// Let's say:
-// currentProjectId = null -> All Tasks
-// currentProjectId = -1 -> Inbox (no project)
-// currentProjectId = >0 -> Specific Project
+const currentView = ref<'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project'>('all')
+const currentProjectId = ref<number | null>(null)
 
 const currentProjectName = computed(() => {
-  if (currentProjectId.value === null) return t('all_tasks')
-  if (currentProjectId.value === -1) return t('inbox')
-  const p = projectStore.projects.find(p => p.id === currentProjectId.value)
-  return p ? p.name : 'Unknown'
+  if (currentView.value === 'all') return t('all_tasks')
+  if (currentView.value === 'inbox') return t('inbox')
+  if (currentView.value === 'today') return t('today')
+  if (currentView.value === 'upcoming') return t('upcoming')
+  if (currentView.value === 'overdue') return t('overdue')
+  
+  if (currentView.value === 'project' && currentProjectId.value) {
+      const p = projectStore.projects.find(p => p.id === currentProjectId.value)
+      return p ? p.name : 'Unknown'
+  }
+  return t('all_tasks')
 })
 
 // Subtasks Logic
@@ -187,6 +192,7 @@ const deleteProject = async (id: number) => {
     await projectStore.deleteProject(id)
     if (currentProjectId.value === id) {
       currentProjectId.value = null
+      currentView.value = 'all'
     }
   }
 }
@@ -209,11 +215,32 @@ const deleteSubtask = async (id: number) => {
 const filteredTodos = computed(() => {
   let items = todoStore.todos
   
-  // Project filter
-  if (currentProjectId.value === -1) {
+  // View filtering
+  if (currentView.value === 'inbox') {
     items = items.filter(t => t.project_id === null)
-  } else if (currentProjectId.value !== null) {
+  } else if (currentView.value === 'project' && currentProjectId.value) {
     items = items.filter(t => t.project_id === currentProjectId.value)
+  } else if (currentView.value === 'today') {
+      const now = new Date()
+      items = items.filter(t => {
+          if (!t.due_date) return false
+          const d = new Date(t.due_date)
+          return d.getDate() === now.getDate() && 
+                 d.getMonth() === now.getMonth() && 
+                 d.getFullYear() === now.getFullYear()
+      })
+  } else if (currentView.value === 'upcoming') {
+      const now = new Date()
+      const nextWeek = new Date()
+      nextWeek.setDate(now.getDate() + 7)
+      items = items.filter(t => {
+          if (!t.due_date) return false
+          const d = new Date(t.due_date)
+          return d >= now && d <= nextWeek
+      })
+  } else if (currentView.value === 'overdue') {
+      const now = new Date()
+      items = items.filter(t => !t.completed && t.due_date && new Date(t.due_date) < now)
   }
 
   // Search filter
@@ -298,20 +325,49 @@ const currentTodoSubtasks = computed(() => {
 
         <nav class="space-y-1">
           <button 
-            @click="currentProjectId = null"
+            @click="currentView = 'all'; currentProjectId = null"
             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            :class="currentProjectId === null ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+            :class="currentView === 'all' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
           >
             <PhList size="18" />
             {{ t('all_tasks') || 'All Tasks' }}
           </button>
           <button 
-            @click="currentProjectId = -1"
+            @click="currentView = 'inbox'; currentProjectId = null"
             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            :class="currentProjectId === -1 ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+            :class="currentView === 'inbox' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
           >
             <PhFolder size="18" />
             {{ t('inbox') || 'Inbox' }}
+          </button>
+          
+          <div class="pt-2 pb-1">
+            <div class="h-px bg-slate-100 dark:bg-slate-800 mx-3"></div>
+          </div>
+
+          <button 
+            @click="currentView = 'today'; currentProjectId = null"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'today' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhCalendar size="18" />
+            {{ t('today') || 'Today' }}
+          </button>
+          <button 
+            @click="currentView = 'upcoming'; currentProjectId = null"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'upcoming' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhCalendarCheck size="18" />
+            {{ t('upcoming') || 'Upcoming' }}
+          </button>
+          <button 
+            @click="currentView = 'overdue'; currentProjectId = null"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'overdue' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhWarningCircle size="18" />
+            {{ t('overdue') || 'Overdue' }}
           </button>
         </nav>
 
@@ -327,8 +383,8 @@ const currentTodoSubtasks = computed(() => {
               v-for="project in projectStore.projects" 
               :key="project.id"
               class="group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-              :class="currentProjectId === project.id ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
-              @click="currentProjectId = project.id"
+              :class="currentView === 'project' && currentProjectId === project.id ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+              @click="currentView = 'project'; currentProjectId = project.id"
             >
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: project.color }"></span>
