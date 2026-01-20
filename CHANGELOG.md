@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-01-20
+
+### Added
+
+#### ✨ Features
+- **Task Notifications**: Added native desktop notifications for task reminders.
+- **Repeating Tasks**: Added support for recurring tasks (Daily, Weekly, Monthly, Weekdays).
+- **Reminders**: Users can now set specific reminder times for tasks, separate from due dates.
+
+#### 🧪 Testing
+- **E2E Testing**: Added comprehensive E2E tests for new features (reminders, repeat rules) using Cypress.
+- **Accessibility**: Added basic a11y checks in E2E suite.
+
+### Changed
+
+#### 🎨 UI/UX
+- **Unified Input Height**: Standardized the height of all input fields in the task creation modal for better visual consistency.
+- **Visual Indicators**: Added bell and repeat icons to task cards to indicate active reminders and recurrence rules.
+
+#### 📚 Documentation
+- **Updated Docs**: Updated README and Chinese documentation with new features and Linux dependencies (`libnotify-dev`).
+
 ## [0.1.2] - 2026-01-19
 
 ### Added
