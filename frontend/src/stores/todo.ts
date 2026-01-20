@@ -45,10 +45,12 @@ export const useTodoStore = defineStore('todo', () => {
       // If dueDate is empty string, send null
       const dateToSend = dueDate === '' ? null : dueDate
       const remindToSend = remindAt === '' ? null : remindAt
-      await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags, project_id: projectId, remind_at: remindToSend, repeat })
+      const response = await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags, project_id: projectId, remind_at: remindToSend, repeat })
       await fetchTodos()
+      return response.data.id
     } catch (error) {
       console.error('Failed to add todo:', error)
+      return null
     }
   }
 

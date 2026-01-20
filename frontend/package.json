@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "test": "vitest"
+    "test": "vitest",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@phosphor-icons/vue": "^2.0.20",

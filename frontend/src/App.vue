@@ -97,6 +97,7 @@ const currentProjectName = computed(() => {
 
 // Subtasks Logic
 const newSubtaskTitle = ref('')
+const tempSubtasks = ref<string[]>([])
 
 onMounted(() => {
   todoStore.fetchTodos()
@@ -116,6 +117,7 @@ const openAddModal = () => {
     project_id: currentProjectId.value && currentProjectId.value > 0 ? currentProjectId.value : -1
   }
   newSubtaskTitle.value = ''
+  tempSubtasks.value = []
   showModal.value = true
 }
 
@@ -170,7 +172,7 @@ const handleSubmit = async () => {
         project_id: projectId
       })
   } else {
-      await todoStore.addTodo(
+      const newId = await todoStore.addTodo(
         form.value.title, 
         form.value.priority, 
         dateToSend, 
@@ -180,6 +182,12 @@ const handleSubmit = async () => {
         remindToSend,
         form.value.repeat
       )
+      
+      if (newId && tempSubtasks.value.length > 0) {
+          for (const title of tempSubtasks.value) {
+              await todoStore.addSubtask(newId, title)
+          }
+      }
   }
   showModal.value = false
 }
@@ -204,17 +212,28 @@ const deleteProject = async (id: number) => {
 
 // Subtask Handlers
 const addSubtask = async () => {
-  if (!newSubtaskTitle.value.trim() || !form.value.id) return
-  await todoStore.addSubtask(form.value.id, newSubtaskTitle.value)
+  if (!newSubtaskTitle.value.trim()) return
+  
+  if (form.value.id) {
+    await todoStore.addSubtask(form.value.id, newSubtaskTitle.value)
+  } else {
+    tempSubtasks.value.push(newSubtaskTitle.value)
+  }
   newSubtaskTitle.value = ''
 }
 
 const toggleSubtask = async (subtask: Subtask) => {
+  // Only toggle real subtasks
+  if ((subtask as any).isTemp) return
   await todoStore.updateSubtask(subtask.id, { completed: !subtask.completed })
 }
 
-const deleteSubtask = async (id: number) => {
-  await todoStore.deleteSubtask(id)
+const deleteSubtask = async (id: number, isTemp: boolean = false) => {
+  if (isTemp) {
+    tempSubtasks.value.splice(id, 1)
+  } else {
+    await todoStore.deleteSubtask(id)
+  }
 }
 
 const filteredTodos = useTodoFilter(
@@ -270,10 +289,19 @@ const getRepeatLabel = (value: string) => {
 void getRepeatLabel
 
 
-const currentTodoSubtasks = computed(() => {
-  if (!form.value.id) return []
-  const todo = todoStore.todos.find(t => t.id === form.value.id)
-  return todo ? todo.subtasks : []
+const displaySubtasks = computed(() => {
+  if (form.value.id) {
+    const todo = todoStore.todos.find(t => t.id === form.value.id)
+    return todo ? todo.subtasks.map(s => ({ ...s, isTemp: false })) : []
+  }
+  return tempSubtasks.value.map((title, index) => ({
+    id: index,
+    title,
+    completed: false,
+    isTemp: true,
+    created_at: '',
+    todo_id: -1
+  }))
 })
 </script>
 
@@ -694,18 +722,20 @@ const currentTodoSubtasks = computed(() => {
                     </div>
                 </div>
 
-                <!-- Subtasks (Only in Edit Mode) -->
-                <div v-if="isEditing">
+                <!-- Subtasks -->
+                <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{{ t('subtasks') }}</label>
-                    <div class="space-y-2 mb-3">
+                    <div class="space-y-2 mb-3" v-if="displaySubtasks.length > 0">
                       <div 
-                        v-for="subtask in currentTodoSubtasks" 
-                        :key="subtask.id"
-                        class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 group"
+                        v-for="subtask in displaySubtasks" 
+                        :key="subtask.isTemp ? 'temp-' + subtask.id : subtask.id"
+                        class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 group transition-colors"
                       >
                         <button 
                           @click="toggleSubtask(subtask)"
                           class="text-slate-400 hover:text-primary-500 transition-colors"
+                          :disabled="subtask.isTemp"
+                          :class="{ 'cursor-default': subtask.isTemp }"
                         >
                           <PhCheckSquare v-if="subtask.completed" weight="fill" class="text-primary-500" size="20" />
                           <PhCheckSquare v-else size="20" />
@@ -716,20 +746,33 @@ const currentTodoSubtasks = computed(() => {
                         >
                           {{ subtask.title }}
                         </span>
-                        <button @click="deleteSubtask(subtask.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500">
+                        <button @click="deleteSubtask(subtask.id, subtask.isTemp)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity">
                           <PhX size="16" />
                         </button>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <PhPlus class="text-slate-400" />
-                      <input 
-                        v-model="newSubtaskTitle"
-                        @keydown.enter.prevent="addSubtask"
-                        type="text" 
-                        :placeholder="t('add_subtask')" 
-                        class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-sm text-slate-800 dark:text-white placeholder-slate-400" 
-                      />
+                    
+                    <!-- Add Subtask Input -->
+                    <div class="flex items-center gap-3 mt-2">
+                      <div class="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                        <PhPlus class="text-slate-400" size="16" />
+                      </div>
+                      <div class="flex-1 relative">
+                        <input 
+                          v-model="newSubtaskTitle"
+                          @keydown.enter.prevent="addSubtask"
+                          type="text" 
+                          :placeholder="t('add_subtask')" 
+                          class="w-full pl-3 pr-10 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-sm text-slate-800 dark:text-white placeholder-slate-400 transition-shadow" 
+                        />
+                        <button 
+                            v-if="newSubtaskTitle"
+                            @click="addSubtask"
+                            class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-primary-500 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors"
+                        >
+                            <PhPlus size="16" weight="bold" />
+                        </button>
+                      </div>
                     </div>
                 </div>
             </div>
