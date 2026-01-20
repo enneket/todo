@@ -26,6 +26,10 @@
 - **Node.js**: v18 或更高版本
 - **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Make**: 用于运行统一命令 (Windows 用户可使用 WSL 或安装 Make 工具)
+- **Linux 系统依赖**: `libnotify-dev` (用于桌面通知)
+  ```bash
+  sudo apt-get install libnotify-dev
+  ```
 
 ### 安装
 

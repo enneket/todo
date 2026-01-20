@@ -9,6 +9,8 @@ A modern, privacy-focused, cross-platform desktop Todo application built with Go
 - **Cross-Platform**: Runs on Windows, Linux, and macOS.
 - **Modern UI/UX**: Built with Vue 3, Tailwind CSS, and Phosphor Icons.
 - **Privacy-Focused**: All data is stored locally using SQLite.
+- **Task Notifications**: Native desktop notifications for due tasks.
+- **Repeating Tasks**: Support for daily, weekly, monthly, and custom repeat schedules.
 - **Robust Backend**: Powered by Go 1.24+ and Wails v2.
 - **Developer Friendly**: Unified workflow via Makefile.
 
@@ -26,6 +28,10 @@ A modern, privacy-focused, cross-platform desktop Todo application built with Go
 - **Node.js**: v18 or higher
 - **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Make**: For running unified commands (Windows users can use WSL or ensure Make is installed)
+- **Linux Requirements**: `libnotify-dev` (for desktop notifications)
+  ```bash
+  sudo apt-get install libnotify-dev
+  ```
 
 ### Installation
 
