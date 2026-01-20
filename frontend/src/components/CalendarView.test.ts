@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper, DOMWrapper } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
 import CalendarView from './CalendarView.vue'
-import { useTodoStore } from '../stores/todo'
 import { createI18n } from 'vue-i18n'
 
 // Mock Phosphor Icons
@@ -27,8 +26,7 @@ const i18n = createI18n({
 })
 
 describe('CalendarView', () => {
-  let wrapper: any
-  let todoStore: any
+  let wrapper: VueWrapper
 
   const mockTodos = [
     {
@@ -63,7 +61,6 @@ describe('CalendarView', () => {
         ]
       }
     })
-    todoStore = useTodoStore()
   })
 
   it('renders calendar header with current month', () => {
@@ -92,8 +89,10 @@ describe('CalendarView', () => {
   it('toggles between month and week view', async () => {
     const viewButtons = wrapper.findAll('button')
     // Find Week button (based on text content or order)
-    const weekBtn = viewButtons.find((b: any) => b.text().includes('Week'))
-    await weekBtn.trigger('click')
+    const weekBtn = viewButtons.find((b: DOMWrapper<Element>) => b.text().includes('Week'))
+    if (weekBtn) {
+      await weekBtn.trigger('click')
+    }
 
     // In week view, grid should still be there but logic changes
     // The implementation keeps grid-rows-6 but changes days array length
@@ -110,8 +109,9 @@ describe('CalendarView', () => {
     const taskEl = wrapper.find('.cursor-pointer') // The task element has cursor-pointer class
     await taskEl.trigger('click')
     
-    expect(wrapper.emitted('edit-task')).toBeTruthy()
-    expect(wrapper.emitted('edit-task')[0][0]).toEqual(mockTodos[0])
+    const emitted = wrapper.emitted('edit-task')
+    expect(emitted).toBeTruthy()
+    expect(emitted![0][0]).toEqual(mockTodos[0])
   })
 
   it('navigates to previous/next month', async () => {
