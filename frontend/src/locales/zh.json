@@ -57,5 +57,6 @@
   "sort_due_date": "截止日期",
   "sort_priority": "优先级",
   "ascending": "升序",
-  "descending": "降序"
+  "descending": "降序",
+  "no_tags": "暂无标签"
 }

@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Archivo', 'Noto Sans SC', 'sans-serif'],
-        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+        sans: ['Archivo', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'Droid Sans Fallback', 'sans-serif'],
+        display: ['Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'Droid Sans Fallback', 'sans-serif'],
       },
       colors: {
         slate: {

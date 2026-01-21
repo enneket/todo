@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue'
 import type { Todo } from '../stores/todo'
 
-export type ViewType = 'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project' | 'calendar'
+export type ViewType = 'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project' | 'calendar' | 'tag'
 export type SortOption = 'created_desc' | 'due_asc' | 'due_desc' | 'priority_desc'
 export type FilterType = 'all' | 'active' | 'completed'
 
@@ -9,6 +9,7 @@ export function useTodoFilter(
   todos: Ref<Todo[]>,
   currentView: Ref<ViewType>,
   currentProjectId: Ref<number | null>,
+  currentTag: Ref<string | null>,
   searchQuery: Ref<string>,
   sortOption: Ref<SortOption>,
   filter: Ref<FilterType>
@@ -21,6 +22,8 @@ export function useTodoFilter(
       items = items.filter(t => t.project_id === null)
     } else if (currentView.value === 'project' && currentProjectId.value) {
       items = items.filter(t => t.project_id === currentProjectId.value)
+    } else if (currentView.value === 'tag' && currentTag.value) {
+      items = items.filter(t => t.tags && t.tags.includes(currentTag.value!))
     } else if (currentView.value === 'today') {
         const now = new Date()
         items = items.filter(t => {

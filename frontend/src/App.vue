@@ -8,7 +8,8 @@ import {
   PhPlus, PhTrash, PhCheckCircle, PhCircle, PhTranslate, PhPencil, 
   PhClock, PhMagnifyingGlass, PhWarning, PhChartBar, PhSun, PhMoon, 
   PhDesktop, PhList, PhFolder, PhCheckSquare, PhX, PhBell, PhArrowsClockwise,
-  PhCalendar, PhCalendarCheck, PhWarningCircle, PhSortAscending, PhSortDescending
+  PhCalendar, PhCalendarCheck, PhWarningCircle, PhSortAscending, PhSortDescending,
+  PhTag
 } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
@@ -77,6 +78,7 @@ const filter = ref<'all' | 'active' | 'completed'>('all')
 const searchQuery = ref('')
 const currentView = ref<ViewType>('all')
 const currentProjectId = ref<number | null>(null)
+const currentTag = ref<string | null>(null)
 const sortOption = ref<'created_desc' | 'due_asc' | 'due_desc' | 'priority_desc'>('created_desc')
 const showSortMenu = ref(false)
 
@@ -87,6 +89,7 @@ const currentProjectName = computed(() => {
   if (currentView.value === 'upcoming') return t('upcoming')
   if (currentView.value === 'overdue') return t('overdue')
   if (currentView.value === 'calendar') return t('calendar')
+  if (currentView.value === 'tag' && currentTag.value) return `# ${currentTag.value}`
   
   if (currentView.value === 'project' && currentProjectId.value) {
       const p = projectStore.projects.find(p => p.id === currentProjectId.value)
@@ -240,6 +243,7 @@ const filteredTodos = useTodoFilter(
   computed(() => todoStore.todos),
   currentView,
   currentProjectId,
+  currentTag,
   searchQuery,
   sortOption,
   filter
@@ -397,6 +401,29 @@ const displaySubtasks = computed(() => {
               <button @click.stop="deleteProject(project.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500" :aria-label="t('delete') || 'Delete'">
                 <PhX size="14" />
               </button>
+            </div>
+          </nav>
+        </div>
+
+        <div class="mt-8">
+          <div class="flex items-center justify-between px-3 mb-2">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('tags_label') || 'Tags' }}</h3>
+          </div>
+          <nav class="space-y-1">
+            <div 
+              v-for="tag in todoStore.uniqueTags" 
+              :key="tag"
+              class="group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              :class="currentView === 'tag' && currentTag === tag ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+              @click="currentView = 'tag'; currentTag = tag; currentProjectId = null"
+            >
+              <div class="flex items-center gap-2">
+                <PhTag size="14" />
+                {{ tag }}
+              </div>
+            </div>
+             <div v-if="todoStore.uniqueTags.length === 0" class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500 italic">
+              {{ t('no_tags') || 'No tags yet' }}
             </div>
           </nav>
         </div>
@@ -576,7 +603,12 @@ const displaySubtasks = computed(() => {
                               {{ getRepeatLabel(todo.repeat) }}
                           </span>
                           <div class="flex gap-1">
-                              <span v-for="tag in todo.tags" :key="tag" class="text-xs px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium">
+                              <span 
+                                v-for="tag in todo.tags" 
+                                :key="tag" 
+                                @click.stop="currentView = 'tag'; currentTag = tag; currentProjectId = null"
+                                class="text-xs px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                              >
                                   #{{ tag }}
                               </span>
                           </div>

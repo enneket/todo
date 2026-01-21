@@ -60,3 +60,8 @@ The executable will be placed in `build/bin/`.
 This usually happens on Linux when the required libraries are missing.
 - **Fix**: Run the `sudo apt install ...` command listed in "Linux Specifics".
 - **Fix**: Ensure you are using `make dev` which handles the build tags correctly.
+
+### Chinese Characters Display as "Boxes" (Garbled Text) on Linux
+This is due to missing Chinese fonts or font configuration issues.
+- **Fix**: Ensure you have fonts like `fonts-noto-cjk`, `fonts-wqy-microhei`, or `fonts-wqy-zenhei` installed.
+- **Note**: The application has been configured with a broad fallback list (`PingFang SC`, `Microsoft YaHei`, `WenQuanYi Micro Hei`, etc.) in `tailwind.config.js` to mitigate this.

@@ -42,6 +42,7 @@ describe('useTodoFilter', () => {
       todos,
       ref('today'),
       ref(null),
+      ref(null),
       ref(''),
       ref('created_desc'),
       ref('all')
@@ -62,6 +63,7 @@ describe('useTodoFilter', () => {
       futureTodos,
       ref('upcoming'),
       ref(null),
+      ref(null),
       ref(''),
       ref('created_desc'),
       ref('all')
@@ -80,6 +82,7 @@ describe('useTodoFilter', () => {
     const filtered = useTodoFilter(
       todos,
       ref('overdue'),
+      ref(null),
       ref(null),
       ref(''),
       ref('created_desc'),
@@ -101,6 +104,7 @@ describe('useTodoFilter', () => {
       todos,
       ref('all'),
       ref(null),
+      ref(null),
       ref(''),
       ref('priority_desc'),
       ref('all')
@@ -120,6 +124,7 @@ describe('useTodoFilter', () => {
       todos,
       ref('all'),
       ref(null),
+      ref(null),
       ref(''),
       ref('due_asc'),
       ref('all')
@@ -127,5 +132,26 @@ describe('useTodoFilter', () => {
 
     // Expected: Earliest first, null last
     expect(filtered.value.map(t => t.id)).toEqual([2, 1, 3])
+  })
+
+  it('filters by Tag', () => {
+    const todos = ref([
+      createTodo({ id: 1, title: 'Tag A', tags: ['work', 'urgent'] }),
+      createTodo({ id: 2, title: 'Tag B', tags: ['home'] }),
+      createTodo({ id: 3, title: 'No Tags', tags: [] })
+    ])
+
+    const filtered = useTodoFilter(
+      todos,
+      ref('tag'),
+      ref(null),
+      ref('work'),
+      ref(''),
+      ref('created_desc'),
+      ref('all')
+    )
+
+    expect(filtered.value).toHaveLength(1)
+    expect(filtered.value[0].id).toBe(1)
   })
 })

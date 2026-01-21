@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface Subtask {
   id: number
@@ -27,6 +27,19 @@ export interface Todo {
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([])
+  
+  const uniqueTags = computed(() => {
+    const tags = new Set<string>()
+    todos.value.forEach(todo => {
+      if (todo.tags && Array.isArray(todo.tags)) {
+        todo.tags.forEach(tag => {
+          if (tag.trim()) tags.add(tag.trim())
+        })
+      }
+    })
+    return Array.from(tags).sort()
+  })
+
   // Assume API is running on localhost:8081 (from main.go)
   const API_URL = 'http://localhost:8081/api/todos'
   const SUBTASK_API_URL = 'http://localhost:8081/api/subtasks'
@@ -103,5 +116,5 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  return { todos, fetchTodos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask }
+  return { todos, uniqueTags, fetchTodos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask }
 })

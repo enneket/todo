@@ -57,5 +57,6 @@
   "sort_due_date": "Due Date",
   "sort_priority": "Priority",
   "ascending": "Ascending",
-  "descending": "Descending"
+  "descending": "Descending",
+  "no_tags": "No tags yet"
 }

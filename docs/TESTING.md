@@ -33,6 +33,7 @@ We use Cypress for End-to-End testing of the full application flow (Frontend + B
 
 ### Test Files
 - `frontend/cypress/e2e/todo.cy.ts`: Covers Todos (Add/Complete), Projects (Create/Filter), and basic navigation.
+- `frontend/cypress/e2e/tags.cy.ts`: Covers Tag system (Add tags, Filter by Sidebar/Card).
 
 ## Test Coverage Reports (As of Latest Run)
 

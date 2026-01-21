@@ -31,6 +31,7 @@ graph TD
 3. **Data Relations**:
    - **Projects**: Todos can optionally belong to a Project.
    - **Subtasks**: Todos can contain multiple Subtasks (simple checklist items).
+   - **Tags**: Todos can have multiple tags (stored as JSON array string).
    - **Foreign Keys**: Enforced at DB level (`ON DELETE CASCADE` for Subtasks, `SET NULL` for Projects).
 
 ### Directory Structure
