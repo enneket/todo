@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-01-21
+
+### Added
+
+#### ✨ Features
+- **Project Management**: Introduced "Projects" to organize tasks and "Subtasks" for better task breakdown.
+- **Calendar View**: Added a new Calendar View (Month/Week) for visualizing tasks by date.
+- **Smart Views**: Added "Today", "Upcoming", and "Overdue" smart filters in the sidebar.
+- **Advanced Sorting**: Supported sorting tasks by Priority, Due Date, and Creation Date (Asc/Desc).
+- **Dark Mode**: Implemented full Dark Mode support with system preference detection and manual toggle.
+
+#### 🎨 UI/UX
+- **Navigation**: Enhanced sidebar with project lists and smart view categories.
+- **Visuals**: Improved task list readability and added specific icons for new views.
+
+#### 🌐 Internationalization
+- **Localization**: Expanded Chinese (zh-CN) translation coverage for all new features.
+
 ## [0.1.3] - 2026-01-20
 
 ### Added
