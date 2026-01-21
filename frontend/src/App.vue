@@ -222,9 +222,9 @@ const addSubtask = async () => {
   newSubtaskTitle.value = ''
 }
 
-const toggleSubtask = async (subtask: Subtask) => {
+const toggleSubtask = async (subtask: Subtask & { isTemp?: boolean }) => {
   // Only toggle real subtasks
-  if ((subtask as any).isTemp) return
+  if (subtask.isTemp) return
   await todoStore.updateSubtask(subtask.id, { completed: !subtask.completed })
 }
 
