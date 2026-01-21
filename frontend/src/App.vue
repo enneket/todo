@@ -14,7 +14,7 @@ import {
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
 import CalendarView from './components/CalendarView.vue'
-import { useTodoFilter, type ViewType } from './composables/useTodoFilter'
+import { useTodoFilter, type ViewType, type FilterType } from './composables/useTodoFilter'
 
 const { t, locale } = useI18n()
 const todoStore = useTodoStore()
@@ -547,7 +547,7 @@ const displaySubtasks = computed(() => {
           <button
             v-for="f in ['all', 'active', 'completed']"
             :key="f"
-            @click="filter = f as any"
+            @click="filter = f as FilterType"
             class="px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
             :class="
               filter === f
