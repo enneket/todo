@@ -1,3 +1,5 @@
+@import '@vuepic/vue-datepicker/dist/main.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,4 +12,78 @@ body {
     'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'Droid Sans Fallback', Inter,
     system-ui, Avenir, Helvetica, Arial, sans-serif;
   @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+}
+
+/* ---- Todo app theme overrides for @vuepic/vue-datepicker ---- */
+.todo-datepicker {
+  --dp-background-color: #f1f5f9;
+  --dp-text-color: #334155;
+  --dp-hover-color: #e2e8f0;
+  --dp-hover-text-color: #0f172a;
+  --dp-hover-icon-color: #475569;
+  --dp-primary-color: #3b82f6;
+  --dp-primary-text-color: #ffffff;
+  --dp-secondary-color: #cbd5e1;
+  --dp-border-color: #cbd5e1;
+  --dp-menu-border-color: #cbd5e1;
+  --dp-border-color-hover: #94a3b8;
+  --dp-icon-color: #64748b;
+  --dp-danger-color: #ef4444;
+  --dp-highlight-color: #dbeafe;
+  --dp-border-radius: 0.75rem;
+  --dp-font-family: inherit;
+  width: 100%;
+}
+
+.todo-datepicker .dp__input {
+  background-color: #f1f5f9;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: #334155;
+  height: 42px;
+  width: 100%;
+}
+
+.todo-datepicker .dp__input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+
+.todo-datepicker .dp__menu {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.18);
+  border-color: #e2e8f0;
+}
+
+.dark .todo-datepicker {
+  --dp-background-color: #1e293b;
+  --dp-text-color: #e2e8f0;
+  --dp-hover-color: #334155;
+  --dp-hover-text-color: #f8fafc;
+  --dp-hover-icon-color: #cbd5e1;
+  --dp-primary-color: #3b82f6;
+  --dp-primary-text-color: #ffffff;
+  --dp-secondary-color: #475569;
+  --dp-border-color: #475569;
+  --dp-menu-border-color: #475569;
+  --dp-border-color-hover: #64748b;
+  --dp-icon-color: #94a3b8;
+  --dp-highlight-color: #1e3a8a;
+}
+
+.dark .todo-datepicker .dp__input {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.dark .todo-datepicker .dp__input:focus {
+  box-shadow: 0 0 0 2px #1e3a8a;
+}
+
+.dark .todo-datepicker .dp__menu {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
 }

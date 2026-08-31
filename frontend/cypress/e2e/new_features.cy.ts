@@ -19,16 +19,13 @@ describe('New Features E2E', () => {
     // Fill Title
     cy.get('input[placeholder="What needs to be done?"]').type(taskTitle)
     
-    // Set Remind At
-    // Find the label "Remind At" and get the input following it
-    // Or since we know the structure:
-    // Due Date is the first datetime-local, Remind At is the second
-    cy.get('input[type="datetime-local"]').eq(1).then($input => {
-        // Set a future date. Format: YYYY-MM-DDTHH:mm
+    // Set Remind At — find the second VueDatePicker (after Due Date) in the form
+    cy.get('.todo-datepicker input').eq(1).then($input => {
+        // Set a future date. Format: yyyy-MM-dd HH:mm (VueDatePicker format)
         const now = new Date()
         now.setMinutes(now.getMinutes() + 30) // 30 mins later
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset()) // Adjust for local
-        const dateStr = now.toISOString().slice(0, 16)
+        const dateStr = now.toISOString().slice(0, 16).replace('T', ' ')
         $input.val(dateStr)
         // Trigger input event to update v-model
         cy.wrap($input).trigger('input')

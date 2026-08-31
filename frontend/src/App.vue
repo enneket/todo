@@ -14,9 +14,44 @@ import {
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
 import CalendarView from './components/CalendarView.vue'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import { zhCN } from 'date-fns/locale'
 import { useTodoFilter, type ViewType, type FilterType } from './composables/useTodoFilter'
 
 const { t, locale } = useI18n()
+
+// Localized locale for the date picker; falls back to en-US for non-zh locales.
+const datePickerLocale = computed(() => (locale.value === 'zh' ? zhCN : undefined))
+
+// Convert form string <-> Date for the date picker without changing the
+// underlying form field format (`YYYY-MM-DDTHH:mm`).
+const parseLocalDateTime = (value: string | undefined): Date | null => {
+    if (!value) return null
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? null : d
+}
+const formatLocalDateTime = (date: Date | null | undefined): string => {
+    if (!date) return ''
+    const offset = date.getTimezoneOffset() * 60000
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
+// v14 renamed cancel-text/select-text/now-button to actionRow.* — see
+// ActionRowConfig in @vuepic/vue-datepicker/dist/index.d.ts.
+const datePickerActionRow = {
+    showSelect: true,
+    showCancel: true,
+    showNow: true,
+    showPreview: true,
+    selectBtnLabel: '选择',
+    cancelBtnLabel: '取消',
+    nowBtnLabel: '此刻',
+}
+const updateDueDate = (date: Date | null) => {
+    form.value.due_date = formatLocalDateTime(date)
+}
+const updateRemindAt = (date: Date | null) => {
+    form.value.remind_at = formatLocalDateTime(date)
+}
 const todoStore = useTodoStore()
 const themeStore = useThemeStore()
 const projectStore = useProjectStore()
@@ -700,7 +735,7 @@ const displaySubtasks = computed(() => {
     
     <!-- Add/Edit Modal (Backdrop blur) -->
     <div v-if="showModal" class="fixed inset-0 bg-slate-900/20 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl p-0 w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 transform transition-all scale-100 max-h-[90vh] flex flex-col">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-0 w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 transform transition-all scale-100 max-h-[95vh] flex flex-col">
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center flex-shrink-0">
                 <h2 class="text-lg font-bold font-display text-slate-800 dark:text-white">{{ isEditing ? t('edit') : t('add') }}</h2>
@@ -741,11 +776,19 @@ const displaySubtasks = computed(() => {
                     </div>
                     <div>
                          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('due_date') }}</label>
-                         <input 
-                            type="datetime-local" 
-                            v-model="form.due_date" 
-                            class="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white text-sm h-[42px] dark:[color-scheme:dark]" 
-                        />
+                         <VueDatePicker
+                            :model-value="parseLocalDateTime(form.due_date)"
+                            @update:model-value="updateDueDate"
+                            :locale="datePickerLocale"
+                            :enable-time-picker="true"
+                            :is-24="true"
+                            :formats="{ input: 'yyyy年MM月dd日 HH:mm', preview: 'yyyy年MM月dd日 HH:mm' }"
+                            :action-row="datePickerActionRow"
+                            :clearable="true"
+                            teleport
+                            :floating="{ placement: 'bottom-start', flip: false }"
+                            class="todo-datepicker"
+                         />
                     </div>
                 </div>
 
@@ -753,11 +796,19 @@ const displaySubtasks = computed(() => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('remind_at') }}</label>
-                         <input 
-                            type="datetime-local" 
-                            v-model="form.remind_at" 
-                            class="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white text-sm h-[42px] dark:[color-scheme:dark]" 
-                        />
+                         <VueDatePicker
+                            :model-value="parseLocalDateTime(form.remind_at)"
+                            @update:model-value="updateRemindAt"
+                            :locale="datePickerLocale"
+                            :enable-time-picker="true"
+                            :is-24="true"
+                            :formats="{ input: 'yyyy年MM月dd日 HH:mm', preview: 'yyyy年MM月dd日 HH:mm' }"
+                            :action-row="datePickerActionRow"
+                            :clearable="true"
+                            teleport
+                            :floating="{ placement: 'bottom-start', flip: false }"
+                            class="todo-datepicker"
+                         />
                     </div>
                     <div>
                          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('repeat') }}</label>

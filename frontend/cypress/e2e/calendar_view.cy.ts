@@ -39,8 +39,8 @@ describe('Calendar View E2E', () => {
     const offset = now.getTimezoneOffset() * 60000
     const localISOTime = (new Date(now.getTime() - offset)).toISOString().slice(0, 16)
     
-    // Find the due date input. It is the first datetime-local input
-    cy.get('input[type="datetime-local"]').first().type(localISOTime)
+    // Find the due date input. It is the first VueDatePicker input in the form.
+    cy.get('.todo-datepicker input').first().invoke('val', localISOTime.replace('T', ' ')).trigger('input')
     
     cy.get('div[class*="fixed"]').contains('button', 'Add').click()
 

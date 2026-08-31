@@ -37,8 +37,8 @@ describe('Smart Views and Sorting', () => {
 
     // Set Due Date
     if (date) {
-        // datetime-local input
-        cy.contains('label', 'Due Date').parent().find('input').type(date)
+        // VueDatePicker renders a text input we can drive directly
+        cy.contains('label', 'Due Date').parent().find('.todo-datepicker input').invoke('val', date.replace('T', ' ')).trigger('input')
     }
 
     // Click Save/Add
