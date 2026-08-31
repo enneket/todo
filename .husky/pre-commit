@@ -1,0 +1,2 @@
+# 提交前对暂存的前端文件执行 lint，拦截 lint 错误进入提交历史
+cd frontend && npx --no-install lint-staged
