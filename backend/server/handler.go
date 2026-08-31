@@ -38,7 +38,16 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate, req.RemindAt, req.Repeat, req.Tags, req.ProjectID)
+	id, err := service.CreateTodo(service.CreateTodoParams{
+		Title:       req.Title,
+		Description: req.Description,
+		Priority:    req.Priority,
+		DueDate:     req.DueDate,
+		RemindAt:    req.RemindAt,
+		Repeat:      req.Repeat,
+		Tags:        req.Tags,
+		ProjectID:   req.ProjectID,
+	})
 	if err != nil {
 		log.Printf("CreateTodo failed: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)

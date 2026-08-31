@@ -121,7 +121,14 @@ func TestTodoService(t *testing.T) {
 
 	// Test CreateTodo
 	now := time.Now()
-	id, err := CreateTodo("Buy Milk", "Groceries", "high", &now, nil, "", []string{"shopping"}, &projIDInt)
+	id, err := CreateTodo(CreateTodoParams{
+		Title:       "Buy Milk",
+		Description: "Groceries",
+		Priority:    "high",
+		DueDate:     &now,
+		Tags:        []string{"shopping"},
+		ProjectID:   &projIDInt,
+	})
 	if err != nil {
 		t.Fatalf("CreateTodo failed: %v", err)
 	}
@@ -193,7 +200,12 @@ func TestTodoRepeat(t *testing.T) {
 
 	now := time.Now()
 	// Create todo with daily repeat
-	id, err := CreateTodo("Repeat Task", "", "high", &now, nil, "daily", nil, nil)
+	id, err := CreateTodo(CreateTodoParams{
+		Title:    "Repeat Task",
+		Priority: "high",
+		DueDate:  &now,
+		Repeat:   "daily",
+	})
 	if err != nil {
 		t.Fatalf("CreateTodo failed: %v", err)
 	}
@@ -250,7 +262,7 @@ func TestSubtaskService(t *testing.T) {
 	defer db.DB.Close()
 
 	// Create a todo first
-	todoID, _ := CreateTodo("Main Task", "", "medium", nil, nil, "", nil, nil)
+	todoID, _ := CreateTodo(CreateTodoParams{Title: "Main Task"})
 	todoIDInt := int(todoID)
 
 	// Test CreateSubtask
@@ -299,9 +311,9 @@ func TestGetTodosBatchedSubtasks(t *testing.T) {
 	// Three todos, each with its own subtasks. After GetTodos every todo must
 	// end up with only its own subtasks — i.e. the batch IN-query joined them
 	// correctly and didn't smear subtasks across todos.
-	todo1, _ := CreateTodo("Task 1", "", "medium", nil, nil, "", nil, nil)
-	todo2, _ := CreateTodo("Task 2", "", "medium", nil, nil, "", nil, nil)
-	todo3, _ := CreateTodo("Task 3", "", "medium", nil, nil, "", nil, nil)
+	todo1, _ := CreateTodo(CreateTodoParams{Title: "Task 1"})
+	todo2, _ := CreateTodo(CreateTodoParams{Title: "Task 2"})
+	todo3, _ := CreateTodo(CreateTodoParams{Title: "Task 3"})
 
 	CreateSubtask(int(todo1), "1.a")
 	CreateSubtask(int(todo1), "1.b")
@@ -343,7 +355,14 @@ func TestTodoPartialUpdate(t *testing.T) {
 
 	// Seed a todo with every field populated so we can detect any unwanted wipe.
 	due := time.Now().Add(24 * time.Hour)
-	id, err := CreateTodo("Original", "Original desc", "medium", &due, nil, "weekly", []string{"work", "urgent"}, nil)
+	id, err := CreateTodo(CreateTodoParams{
+		Title:       "Original",
+		Description: "Original desc",
+		Priority:    "medium",
+		DueDate:     &due,
+		Repeat:      "weekly",
+		Tags:        []string{"work", "urgent"},
+	})
 	if err != nil {
 		t.Fatalf("CreateTodo failed: %v", err)
 	}
@@ -396,7 +415,11 @@ func TestNotificationDedup(t *testing.T) {
 
 	// Create a todo whose remind_at falls inside the [now, now+1m) window.
 	remindAt := time.Now().UTC().Add(10 * time.Second)
-	id, err := CreateTodo("Reminder", "", "high", nil, &remindAt, "", nil, nil)
+	id, err := CreateTodo(CreateTodoParams{
+		Title:    "Reminder",
+		Priority: "high",
+		RemindAt: &remindAt,
+	})
 	if err != nil {
 		t.Fatalf("CreateTodo failed: %v", err)
 	}

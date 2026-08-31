@@ -7,16 +7,33 @@ import (
 	"todo/backend/db"
 )
 
-func CreateTodo(title, description, priority string, dueDate, remindAt *time.Time, repeat string, tags []string, projectID *int) (int64, error) {
-	if priority == "" {
-		priority = "medium"
+// CreateTodoParams is the payload for CreateTodo. Using a struct instead of
+// positional arguments keeps the call sites self-documenting and stops
+// callers from silently swapping fields (e.g. remind_at vs due_date).
+type CreateTodoParams struct {
+	Title       string
+	Description string
+	Priority    string
+	DueDate     *time.Time
+	RemindAt    *time.Time
+	Repeat      string
+	Tags        []string
+	ProjectID   *int
+}
+
+func CreateTodo(p CreateTodoParams) (int64, error) {
+	if p.Priority == "" {
+		p.Priority = "medium"
 	}
-	tagsJSON, _ := json.Marshal(tags)
-	if tags == nil {
+	tagsJSON, _ := json.Marshal(p.Tags)
+	if p.Tags == nil {
 		tagsJSON = []byte("[]")
 	}
 
-	res, err := db.DB.Exec("INSERT INTO todos (title, description, priority, due_date, remind_at, repeat, tags, project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", title, description, priority, dueDate, remindAt, repeat, string(tagsJSON), projectID)
+	res, err := db.DB.Exec(
+		"INSERT INTO todos (title, description, priority, due_date, remind_at, repeat, tags, project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		p.Title, p.Description, p.Priority, p.DueDate, p.RemindAt, p.Repeat, string(tagsJSON), p.ProjectID,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -118,7 +135,16 @@ func UpdateTodoStatus(id int, completed bool) error {
 				json.Unmarshal([]byte(tagsJSON), &t.Tags)
 			}
 			
-			CreateTodo(t.Title, t.Description, t.Priority, nextDueDate, nextRemindAt, t.Repeat, t.Tags, t.ProjectID)
+			CreateTodo(CreateTodoParams{
+				Title:       t.Title,
+				Description: t.Description,
+				Priority:    t.Priority,
+				DueDate:     nextDueDate,
+				RemindAt:    nextRemindAt,
+				Repeat:      t.Repeat,
+				Tags:        t.Tags,
+				ProjectID:   t.ProjectID,
+			})
 		}
 	}
 
