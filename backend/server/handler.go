@@ -2,8 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
-	"strconv"
 	"time"
 	"todo/backend/db"
 	"todo/backend/service"
@@ -12,7 +12,8 @@ import (
 func GetTodosHandler(w http.ResponseWriter, r *http.Request) {
 	todos, err := service.GetTodos()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("GetTodos failed: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if todos == nil {
@@ -22,6 +23,7 @@ func GetTodosHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	var req struct {
 		Title       string     `json:"title"`
 		Description string     `json:"description"`
@@ -33,21 +35,33 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		ProjectID   *int       `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 	id, err := service.CreateTodo(req.Title, req.Description, req.Priority, req.DueDate, req.RemindAt, req.Repeat, req.Tags, req.ProjectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("CreateTodo failed: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]int64{"id": id})
+	// Return the full todo so the client can prepend it locally without an
+	// extra GET /api/todos round-trip.
+	todo, err := service.GetTodo(int(id))
+	if err != nil {
+		log.Printf("GetTodo(%d) after create failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(todo)
 }
 
 func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, _ := strconv.Atoi(idStr)
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	var req struct {
 		Completed   *bool      `json:"completed"`
 		Title       *string    `json:"title"`
@@ -60,13 +74,14 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		ProjectID   *int       `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if req.Completed != nil {
 		if err := service.UpdateTodoStatus(id, *req.Completed); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("UpdateTodoStatus(%d) failed: %v", id, err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -86,7 +101,8 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		params.DueDate != nil || params.RemindAt != nil || params.Repeat != nil ||
 		params.Tags != nil || params.ProjectID != nil {
 		if err := service.UpdateTodoDetails(id, params); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("UpdateTodoDetails(%d) failed: %v", id, err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -95,11 +111,14 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, _ := strconv.Atoi(idStr)
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
 
 	if err := service.DeleteTodo(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("DeleteTodo(%d) failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

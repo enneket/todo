@@ -219,3 +219,28 @@ func DeleteTodo(id int) error {
 	_, err := db.DB.Exec("DELETE FROM todos WHERE id = ?", id)
 	return err
 }
+
+// GetTodo fetches a single todo (with its subtasks). Used by handlers that
+// just created/updated a row so they can return the full object to clients
+// without the client having to re-GET the whole list.
+func GetTodo(id int) (db.Todo, error) {
+	row := db.DB.QueryRow("SELECT id, title, description, completed, priority, due_date, remind_at, notified_at, repeat, tags, project_id, created_at FROM todos WHERE id = ?", id)
+	var t db.Todo
+	var tagsJSON string
+	if err := row.Scan(&t.ID, &t.Title, &t.Description, &t.Completed, &t.Priority, &t.DueDate, &t.RemindAt, &t.NotifiedAt, &t.Repeat, &tagsJSON, &t.ProjectID, &t.CreatedAt); err != nil {
+		return db.Todo{}, err
+	}
+	if tagsJSON != "" {
+		json.Unmarshal([]byte(tagsJSON), &t.Tags)
+	}
+	if t.Tags == nil {
+		t.Tags = []string{}
+	}
+	subs, err := GetSubtasks(id)
+	if err == nil {
+		t.Subtasks = subs
+	} else {
+		t.Subtasks = []db.Subtask{}
+	}
+	return t, nil
+}

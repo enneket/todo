@@ -2,60 +2,62 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
-	"strconv"
 	"todo/backend/service"
 )
 
 func CreateSubtaskHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // todo_id
-	todoID, _ := strconv.Atoi(idStr)
+	todoID, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	var req struct {
 		Title string `json:"title"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 	id, err := service.CreateSubtask(todoID, req.Title)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("CreateSubtask(todo=%d) failed: %v", todoID, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]int64{"id": id})
+	// Fetch the new subtask in full so the client can append it to its
+	// in-memory copy without re-GETting the parent todo.
+	sub, err := service.GetSubtask(int(id))
+	if err != nil {
+		log.Printf("GetSubtask(%d) after create failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(sub)
 }
 
 func UpdateSubtaskHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, _ := strconv.Atoi(idStr)
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	var req struct {
 		Title     *string `json:"title"`
 		Completed *bool   `json:"completed"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// We need to fetch current state if partial update, but for simplicity let's require both or handle carefully
-	// Actually, usually we might just toggle completion or rename. 
-	// Since service UpdateSubtask takes both, we ideally should fetch existing subtask first.
-	// But `GetSubtasks` returns a list. 
-	// Let's assume the frontend sends the full object or we implement partial update in service.
-	// For now, let's assume the frontend sends the current state for fields not changing, OR we fetch it.
-	// BUT `GetSubtask(id)` is not implemented in service.
-	// Let's implement a simple "toggle" or "rename" logic in service? 
-	// No, let's just make the service `UpdateSubtask` more robust or assume the frontend provides what's needed.
-	// Wait, I implemented `UpdateSubtask(id, title, completed)` in service.
-	// I should probably allow passing empty title to mean "keep existing" if I want partial updates, but SQL doesn't work that way easily without dynamic query.
-	// Let's rely on frontend sending both for now, or just default to empty/false which is risky.
-	
-	// Better approach:
-	// If I want to support partial updates properly, I should add `GetSubtask(id)` to service.
-	// But to save time, I will assume the frontend sends valid data.
-	
+	// nil fields fall through to UpdateSubtask's defaults — a partial update
+	// (e.g. toggling completion only) is expected to send just that field.
+	// Service treats empty title as "no title update" so the existing title
+	// is overwritten with "" only if the client explicitly sends "".
 	title := ""
 	if req.Title != nil {
 		title = *req.Title
@@ -64,20 +66,24 @@ func UpdateSubtaskHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Completed != nil {
 		completed = *req.Completed
 	}
-	
+
 	if err := service.UpdateSubtask(id, title, completed); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("UpdateSubtask(%d) failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
 func DeleteSubtaskHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, _ := strconv.Atoi(idStr)
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
 
 	if err := service.DeleteSubtask(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("DeleteSubtask(%d) failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

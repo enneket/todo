@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log"
 	"time"
 	"todo/backend/db"
@@ -8,14 +9,23 @@ import (
 	"github.com/gen2brain/beeep"
 )
 
-func StartNotificationScheduler() {
+// StartNotificationScheduler kicks off the periodic reminder check. The
+// caller owns ctx and must cancel it (typically in the Wails OnShutdown hook)
+// so the goroutine exits cleanly when the app quits.
+func StartNotificationScheduler(ctx context.Context) {
 	// Check immediately on start
 	go checkReminders()
 
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
-		for range ticker.C {
-			checkReminders()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				checkReminders()
+			}
 		}
 	}()
 }

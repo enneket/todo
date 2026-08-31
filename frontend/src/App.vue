@@ -163,7 +163,11 @@ const handleSubmit = async () => {
 
   const dateToSend = form.value.due_date ? new Date(form.value.due_date).toISOString() : ''
   const remindToSend = form.value.remind_at ? new Date(form.value.remind_at).toISOString() : ''
-  const tags = form.value.tags.split(',').map(t => t.trim()).filter(t => t)
+  // Split, trim, drop empties, and dedupe so "work, work, urgent" doesn't
+  // produce duplicate tags on the todo.
+  const tags = Array.from(
+    new Set(form.value.tags.split(',').map(t => t.trim()).filter(t => t))
+  )
   const projectId = form.value.project_id === -1 ? null : form.value.project_id
 
   if (isEditing.value && form.value.id) {
@@ -206,13 +210,35 @@ const handleProjectSubmit = async () => {
   projectForm.value = { name: '', description: '', color: '#3B82F6' }
 }
 
+// Generic confirm dialog state — replaces the blocking browser `confirm()`,
+// which is unreliable across Wails webview platforms.
+const showConfirm = ref(false)
+const confirmMessage = ref('')
+const confirmResolve = ref<((ok: boolean) => void) | null>(null)
+
+function openConfirm(message: string): Promise<boolean> {
+  confirmMessage.value = message
+  showConfirm.value = true
+  return new Promise(resolve => {
+    confirmResolve.value = resolve
+  })
+}
+
+function resolveConfirm(ok: boolean) {
+  showConfirm.value = false
+  if (confirmResolve.value) {
+    confirmResolve.value(ok)
+    confirmResolve.value = null
+  }
+}
+
 const deleteProject = async (id: number) => {
-  if (confirm(t('confirm_delete_project') || 'Delete this project?')) {
-    await projectStore.deleteProject(id)
-    if (currentProjectId.value === id) {
-      currentProjectId.value = null
-      currentView.value = 'all'
-    }
+  const ok = await openConfirm(t('confirm_delete_project') || 'Delete this project?')
+  if (!ok) return
+  await projectStore.deleteProject(id)
+  if (currentProjectId.value === id) {
+    currentProjectId.value = null
+    currentView.value = 'all'
   }
 }
 
@@ -870,6 +896,23 @@ const displaySubtasks = computed(() => {
                 </button>
                 <button @click="handleProjectSubmit" class="px-4 py-2 bg-primary-600 text-white font-medium hover:bg-primary-700 rounded-lg">
                     {{ t('create') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div v-if="showConfirm" class="fixed inset-0 bg-slate-900/20 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all" @click.self="resolveConfirm(false)">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-0 w-full max-w-sm shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
+            <div class="p-6">
+                <p class="text-slate-700 dark:text-slate-200">{{ confirmMessage }}</p>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                <button @click="resolveConfirm(false)" class="px-4 py-2 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200/50 rounded-lg">
+                    {{ t('cancel') }}
+                </button>
+                <button @click="resolveConfirm(true)" class="px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-700 rounded-lg">
+                    {{ t('confirm') || 'Confirm' }}
                 </button>
             </div>
         </div>

@@ -24,16 +24,18 @@ func main() {
 
 	// Start HTTP Server
 	// Use a fixed port for now, e.g., 8081
-	server.StartServer("8081")
-	
+	srv := server.NewServer("8081")
+	srv.Start()
+
 	// Start Notification Scheduler
-	service.StartNotificationScheduler()
+	notifCtx, stopNotif := context.WithCancel(context.Background())
+	service.StartNotificationScheduler(notifCtx)
 
 	// Create an instance of the app structure
 	app := NewApp()
 
 	// Create application with options.
-	// Note: wails.Run blocks until the window is closed, so `defer server.StopServer`
+	// Note: wails.Run blocks until the window is closed, so `defer srv.Stop`
 	// here would never fire. Use the OnShutdown hook instead so the HTTP server
 	// actually shuts down when the app exits.
 	err := wails.Run(&options.App{
@@ -44,9 +46,10 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:  app.startup,
+		OnStartup: app.startup,
 		OnShutdown: func(ctx context.Context) {
-			if err := server.StopServer(ctx); err != nil {
+			stopNotif()
+			if err := srv.Stop(ctx); err != nil {
 				log.Printf("error shutting down HTTP server: %v", err)
 			}
 		},

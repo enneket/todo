@@ -30,6 +30,15 @@ func GetSubtasks(todoID int) ([]db.Subtask, error) {
 	return subtasks, nil
 }
 
+func GetSubtask(id int) (db.Subtask, error) {
+	row := db.DB.QueryRow("SELECT id, todo_id, title, completed, created_at FROM subtasks WHERE id = ?", id)
+	var s db.Subtask
+	if err := row.Scan(&s.ID, &s.TodoID, &s.Title, &s.Completed, &s.CreatedAt); err != nil {
+		return db.Subtask{}, err
+	}
+	return s, nil
+}
+
 func UpdateSubtask(id int, title string, completed bool) error {
 	_, err := db.DB.Exec("UPDATE subtasks SET title = ?, completed = ? WHERE id = ?", title, completed, id)
 	return err

@@ -31,7 +31,8 @@ export interface Todo {
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([])
-  
+  const lastError = ref<string | null>(null)
+
   const uniqueTags = computed(() => {
     const tags = new Set<string>()
     todos.value.forEach(todo => {
@@ -48,77 +49,133 @@ export const useTodoStore = defineStore('todo', () => {
   const API_URL = 'http://localhost:8081/api/todos'
   const SUBTASK_API_URL = 'http://localhost:8081/api/subtasks'
 
-  const fetchTodos = async () => {
+  // Wrap a promise so any rejection is recorded on `lastError` instead of
+  // swallowed into the console — the UI can react and show a toast.
+  async function tracked<T>(label: string, p: Promise<T>): Promise<T | null> {
     try {
-      const response = await axios.get<Todo[]>(API_URL)
-      todos.value = response.data || []
-    } catch (error) {
-      console.error('Failed to fetch todos:', error)
-    }
-  }
-
-  const addTodo = async (title: string, priority: string = 'medium', dueDate: string | null = null, description: string = '', tags: string[] = [], projectId: number | null = null, remindAt: string | null = null, repeat: string = '') => {
-    try {
-      // If dueDate is empty string, send null
-      const dateToSend = dueDate === '' ? null : dueDate
-      const remindToSend = remindAt === '' ? null : remindAt
-      const response = await axios.post(API_URL, { title, description, priority, due_date: dateToSend, tags, project_id: projectId, remind_at: remindToSend, repeat })
-      await fetchTodos()
-      return response.data.id
-    } catch (error) {
-      console.error('Failed to add todo:', error)
+      return await p
+    } catch (err: any) {
+      lastError.value = `${label}: ${err?.response?.data || err?.message || 'unknown error'}`
+      console.error(lastError.value, err)
       return null
     }
   }
 
+  function clearError() {
+    lastError.value = null
+  }
+
+  const fetchTodos = async () => {
+    const result = await tracked('fetchTodos', axios.get<Todo[]>(API_URL))
+    if (result) todos.value = result.data || []
+  }
+
+  const addTodo = async (
+    title: string,
+    priority: string = 'medium',
+    dueDate: string | null = null,
+    description: string = '',
+    tags: string[] = [],
+    projectId: number | null = null,
+    remindAt: string | null = null,
+    repeat: string = ''
+  ): Promise<number | null> => {
+    const dateToSend = dueDate === '' ? null : dueDate
+    const remindToSend = remindAt === '' ? null : remindAt
+    const response = await tracked(
+      'addTodo',
+      axios.post<Todo>(API_URL, {
+        title,
+        description,
+        priority,
+        due_date: dateToSend,
+        tags,
+        project_id: projectId,
+        remind_at: remindToSend,
+        repeat,
+      })
+    )
+    if (!response) return null
+    // Prepend the freshly-created todo so the UI updates immediately without
+    // re-fetching the whole list.
+    todos.value.unshift(response.data)
+    return response.data.id
+  }
+
   const updateTodo = async (id: number, updates: Partial<Todo>) => {
-    try {
-        // Ensure due_date is null if empty string
-        if (updates.due_date === '') {
-            updates.due_date = null
-        }
-      await axios.put(`${API_URL}/${id}`, updates)
-      await fetchTodos()
-    } catch (error) {
-      console.error('Failed to update todo:', error)
+    if (updates.due_date === '') {
+      updates.due_date = null as any
+    }
+    const ok = await tracked(
+      'updateTodo',
+      axios.put(`${API_URL}/${id}`, updates)
+    )
+    if (ok === null) return
+    // Patch the row in-place. `completed` flips via a partial update; we trust
+    // the optimistic local value since the server already accepted it.
+    const idx = todos.value.findIndex(t => t.id === id)
+    if (idx !== -1) {
+      todos.value[idx] = { ...todos.value[idx], ...updates, notified_at: null }
     }
   }
 
   const deleteTodo = async (id: number) => {
-    try {
-      await axios.delete(`${API_URL}/${id}`)
-      await fetchTodos()
-    } catch (error) {
-      console.error('Failed to delete todo:', error)
-    }
+    const ok = await tracked('deleteTodo', axios.delete(`${API_URL}/${id}`))
+    if (ok === null) return
+    todos.value = todos.value.filter(t => t.id !== id)
   }
 
   const addSubtask = async (todoId: number, title: string) => {
-    try {
-      await axios.post(`${API_URL}/${todoId}/subtasks`, { title })
-      await fetchTodos()
-    } catch (error) {
-      console.error('Failed to add subtask:', error)
+    const response = await tracked(
+      'addSubtask',
+      axios.post<Subtask>(`${API_URL}/${todoId}/subtasks`, { title })
+    )
+    if (!response) return
+    const idx = todos.value.findIndex(t => t.id === todoId)
+    if (idx !== -1) {
+      todos.value[idx].subtasks = [...todos.value[idx].subtasks, response.data]
     }
   }
 
   const updateSubtask = async (id: number, updates: Partial<Subtask>) => {
-    try {
-      await axios.put(`${SUBTASK_API_URL}/${id}`, updates)
-      await fetchTodos()
-    } catch (error) {
-      console.error('Failed to update subtask:', error)
+    const ok = await tracked('updateSubtask', axios.put(`${SUBTASK_API_URL}/${id}`, updates))
+    if (ok === null) return
+    // Find which todo owns this subtask and patch in place.
+    for (const t of todos.value) {
+      const i = t.subtasks.findIndex(s => s.id === id)
+      if (i !== -1) {
+        t.subtasks[i] = { ...t.subtasks[i], ...updates }
+        break
+      }
     }
   }
 
-  const deleteSubtask = async (id: number) => {
-    try {
-      await axios.delete(`${SUBTASK_API_URL}/${id}`)
-      await fetchTodos()
-    } catch (error) {
-      console.error('Failed to delete subtask:', error)
+  const deleteSubtask = async (id: number | string) => {
+    // Skip the server call for in-memory temp subtasks; the caller has already
+    // removed them from the form state.
+    if (typeof id !== 'number') return
+    const ok = await tracked('deleteSubtask', axios.delete(`${SUBTASK_API_URL}/${id}`))
+    if (ok === null) return
+    for (const t of todos.value) {
+      const i = t.subtasks.findIndex(s => s.id === id)
+      if (i !== -1) {
+        t.subtasks.splice(i, 1)
+        break
+      }
     }
   }
 
-  return { todos, uniqueTags, fetchTodos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask }
+  return {
+    todos,
+    uniqueTags,
+    lastError,
+    clearError,
+    fetchTodos,
+    addTodo,
+    updateTodo,
+    deleteTodo,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+  }
 })

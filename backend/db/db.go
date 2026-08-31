@@ -2,6 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"log"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -56,16 +58,37 @@ func InitDB(dbPath string) error {
 		return err
 	}
 
-	// Migrations: Try to add new columns if they don't exist
-	// We ignore errors here because "duplicate column name" is expected if run multiple times
-	DB.Exec(`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN due_date DATETIME`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN remind_at DATETIME`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN notified_at DATETIME`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN repeat TEXT DEFAULT ''`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN tags TEXT DEFAULT '[]'`)
-	DB.Exec(`ALTER TABLE todos ADD COLUMN project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`)
+	// Migrations: add new columns if they don't already exist.
+	// "duplicate column name" errors are expected on every run after the first
+	// and are silently ignored; anything else gets logged so we notice real
+	// schema failures instead of discovering them at INSERT time.
+	for _, stmt := range []string{
+		`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`,
+		`ALTER TABLE todos ADD COLUMN due_date DATETIME`,
+		`ALTER TABLE todos ADD COLUMN remind_at DATETIME`,
+		`ALTER TABLE todos ADD COLUMN notified_at DATETIME`,
+		`ALTER TABLE todos ADD COLUMN repeat TEXT DEFAULT ''`,
+		`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`,
+		`ALTER TABLE todos ADD COLUMN tags TEXT DEFAULT '[]'`,
+		`ALTER TABLE todos ADD COLUMN project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`,
+	} {
+		if _, err := DB.Exec(stmt); err != nil {
+			if !isDuplicateColumnErr(err) {
+				log.Printf("migration failed (%s): %v", stmt, err)
+			}
+		}
+	}
 
 	return nil
+}
+
+// isDuplicateColumnErr reports whether an ALTER TABLE error is the harmless
+// "column already exists" case (which is expected on every run after the
+// first migration).
+func isDuplicateColumnErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "duplicate column") || strings.Contains(msg, "already exists")
 }
