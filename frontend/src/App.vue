@@ -56,7 +56,6 @@ const todoStore = useTodoStore()
 const themeStore = useThemeStore()
 const projectStore = useProjectStore()
 
-const showStats = ref(false)
 const showSidebar = ref(true) // For mobile/responsive toggle if needed
 
 const priorityOptions = computed(() => [
@@ -124,6 +123,7 @@ const currentProjectName = computed(() => {
   if (currentView.value === 'upcoming') return t('upcoming')
   if (currentView.value === 'overdue') return t('overdue')
   if (currentView.value === 'calendar') return t('calendar')
+  if (currentView.value === 'statistics') return t('statistics')
   if (currentView.value === 'tag' && currentTag.value) return `# ${currentTag.value}`
   
   if (currentView.value === 'project' && currentProjectId.value) {
@@ -469,13 +469,21 @@ const displaySubtasks = computed(() => {
             <PhWarningCircle size="18" />
             {{ t('overdue') || 'Overdue' }}
           </button>
-          <button 
+          <button
             @click="currentView = 'calendar'; currentProjectId = null"
             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             :class="currentView === 'calendar' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
           >
             <PhCalendar size="18" />
             {{ t('calendar') || 'Calendar' }}
+          </button>
+          <button
+            @click="currentView = 'statistics'; currentProjectId = null"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'statistics' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhChartBar size="18" />
+            {{ t('statistics') || 'Statistics' }}
           </button>
         </nav>
 
@@ -593,15 +601,6 @@ const displaySubtasks = computed(() => {
                 <PhDesktop v-else size="24" />
               </button>
               <button
-                @click="showStats = !showStats"
-                class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
-                :title="t('statistics')"
-                :aria-label="t('statistics') || 'Statistics'"
-                :class="{ 'text-primary-600 bg-white dark:bg-slate-900 shadow-sm': showStats }"
-              >
-                <PhChartBar size="24" />
-              </button>
-              <button
                 @click="toggleLanguage"
                 class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
                 :title="t('language')"
@@ -612,23 +611,15 @@ const displaySubtasks = computed(() => {
           </div>
         </header>
 
-        <!-- Stats Panel -->
-        <transition
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="opacity-0 -translate-y-4"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 -translate-y-4"
-        >
-          <StatisticsPanel v-if="showStats && currentView !== 'calendar'" />
-        </transition>
-
-        <CalendarView 
-          v-if="currentView === 'calendar'" 
+        <CalendarView
+          v-if="currentView === 'calendar'"
           class="flex-1 min-h-0 shadow-sm"
           @edit-task="openEditModal"
         />
+
+        <div v-else-if="currentView === 'statistics'" class="space-y-8">
+          <StatisticsPanel />
+        </div>
 
         <div v-else class="space-y-8">
         <!-- Add Button (Hero) -->
