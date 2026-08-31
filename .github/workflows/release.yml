@@ -22,7 +22,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // 发布前必须确认 main 分支最新提交的 CI 全部通过，防止"红 CI 发版"
+            // 发布前必须确认 main 分支最新提交的 CI 全部通过，防止"红 CI 发版"。
+            // 排除 Release 工作流自身的 check run（上次失败的发布不应阻塞本次重试）。
             const { data: commit } = await github.rest.repos.getCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -31,17 +32,19 @@ jobs:
             const { data: checks } = await github.rest.checks.listForRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: commit.data.sha,
+              ref: commit.sha,
             })
             const failed = checks.check_runs.filter(
               r => r.status === 'completed' &&
-                   !['success', 'skipped', 'neutral'].includes(r.conclusion ?? '')
+                   !['success', 'skipped', 'neutral'].includes(r.conclusion ?? '') &&
+                   !r.name.startsWith('Create Release') &&
+                   !r.name.startsWith('Build ')
             )
             if (failed.length > 0) {
               const names = failed.map(r => `${r.name} [${r.conclusion}]`).join(', ')
-              core.setFailed(`main 分支最新提交 ${commit.data.sha.slice(0, 7)} 存在未通过的 CI 检查，禁止发布：${names}`)
+              core.setFailed(`main 分支最新提交 ${commit.sha.slice(0, 7)} 的 CI 未全部通过，禁止发布：${names}`)
             } else {
-              console.log(`OK: main 分支最新提交 ${commit.data.sha.slice(0, 7)} 的 CI 检查全部通过`)
+              console.log(`OK: main 分支最新提交 ${commit.sha.slice(0, 7)} 的 CI 检查全部通过`)
             }
 
       - uses: actions/checkout@v4
