@@ -283,14 +283,33 @@ func TestSubtaskService(t *testing.T) {
 		t.Errorf("Expected subtask title 'Subtask 1', got '%s'", subtasks[0].Title)
 	}
 
-	// Test UpdateSubtask
-	err = UpdateSubtask(int(id), "Subtask 1 Updated", true)
+	// Test UpdateSubtask (fields updated together)
+	title := "Subtask 1 Updated"
+	completed := true
+	err = UpdateSubtask(int(id), &title, &completed)
 	if err != nil {
 		t.Fatalf("UpdateSubtask failed: %v", err)
 	}
 	subtasks, _ = GetSubtasks(todoIDInt)
 	if !subtasks[0].Completed {
 		t.Error("Expected subtask to be completed")
+	}
+	if subtasks[0].Title != "Subtask 1 Updated" {
+		t.Errorf("Expected subtask title 'Subtask 1 Updated', got '%s'", subtasks[0].Title)
+	}
+
+	// A partial update with only completed must not blank the title.
+	completed = false
+	err = UpdateSubtask(int(id), nil, &completed)
+	if err != nil {
+		t.Fatalf("UpdateSubtask (partial) failed: %v", err)
+	}
+	subtasks, _ = GetSubtasks(todoIDInt)
+	if subtasks[0].Completed {
+		t.Error("Expected subtask to be incomplete")
+	}
+	if subtasks[0].Title != "Subtask 1 Updated" {
+		t.Errorf("Expected title to survive partial update, got '%s'", subtasks[0].Title)
 	}
 
 	// Test DeleteSubtask

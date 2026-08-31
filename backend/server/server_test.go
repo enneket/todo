@@ -141,7 +141,7 @@ func TestProjectHandlers(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("GetProjectsHandler returned wrong status: %v", rr.Code)
 	}
-	
+
 	var projects []map[string]interface{}
 	json.Unmarshal(rr.Body.Bytes(), &projects)
 	if len(projects) != 1 {
@@ -159,7 +159,7 @@ func TestSubtaskHandlers(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/todos", bytes.NewBuffer(body))
 	rr := httptest.NewRecorder()
 	http.HandlerFunc(CreateTodoHandler).ServeHTTP(rr, req)
-	
+
 	var todoResp map[string]int
 	json.Unmarshal(rr.Body.Bytes(), &todoResp)
 	todoID := todoResp["id"]
@@ -170,11 +170,12 @@ func TestSubtaskHandlers(t *testing.T) {
 	// PathValue not supported in httptest nicely for default mux without routing
 	// But our handler uses r.PathValue("id").
 	// We need to set it manually or use the mux.
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/todos/{id}/subtasks", CreateSubtaskHandler)
 	mux.HandleFunc("PUT /api/subtasks/{id}", UpdateSubtaskHandler)
 	mux.HandleFunc("DELETE /api/subtasks/{id}", DeleteSubtaskHandler)
+	mux.HandleFunc("GET /api/todos", GetTodosHandler)
 
 	url := "/api/todos/" + string(rune(todoID+'0')) + "/subtasks" // hacky int to string for small int
 	// Better:
@@ -189,7 +190,7 @@ func TestSubtaskHandlers(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("CreateSubtaskHandler returned wrong status: %v", rr.Code)
 	}
-	
+
 	var subResp map[string]int
 	json.Unmarshal(rr.Body.Bytes(), &subResp)
 	subID := subResp["id"]
@@ -206,6 +207,25 @@ func TestSubtaskHandlers(t *testing.T) {
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("UpdateSubtaskHandler returned wrong status: %v", rr.Code)
+	}
+
+	// PUT sent only {"completed": true}; the subtask title must survive.
+	getReq, _ := http.NewRequest("GET", "/api/todos", nil)
+	getRR := httptest.NewRecorder()
+	mux.ServeHTTP(getRR, getReq)
+	var todos []map[string]interface{}
+	if err := json.Unmarshal(getRR.Body.Bytes(), &todos); err != nil {
+		t.Fatalf("GET /api/todos response not valid JSON: %v", err)
+	}
+	if len(todos) != 1 {
+		t.Fatalf("Expected 1 todo, got %d", len(todos))
+	}
+	subtasks := todos[0]["subtasks"].([]interface{})
+	if len(subtasks) != 1 {
+		t.Fatalf("Expected 1 subtask, got %d", len(subtasks))
+	}
+	if title := subtasks[0].(map[string]interface{})["title"]; title != "Sub 1" {
+		t.Errorf("Expected subtask title 'Sub 1' to survive partial update, got %v", title)
 	}
 
 	// Delete Subtask

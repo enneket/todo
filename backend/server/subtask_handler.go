@@ -54,20 +54,10 @@ func UpdateSubtaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// nil fields fall through to UpdateSubtask's defaults — a partial update
-	// (e.g. toggling completion only) is expected to send just that field.
-	// Service treats empty title as "no title update" so the existing title
-	// is overwritten with "" only if the client explicitly sends "".
-	title := ""
-	if req.Title != nil {
-		title = *req.Title
-	}
-	completed := false
-	if req.Completed != nil {
-		completed = *req.Completed
-	}
-
-	if err := service.UpdateSubtask(id, title, completed); err != nil {
+	// req fields are pointers, so UpdateSubtask only updates the fields the
+	// client actually sent — a partial update (e.g. toggling completion only)
+	// is expected to send just that field.
+	if err := service.UpdateSubtask(id, req.Title, req.Completed); err != nil {
 		log.Printf("UpdateSubtask(%d) failed: %v", id, err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

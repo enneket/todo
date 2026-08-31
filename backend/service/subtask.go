@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"todo/backend/db"
 )
 
@@ -39,8 +41,24 @@ func GetSubtask(id int) (db.Subtask, error) {
 	return s, nil
 }
 
-func UpdateSubtask(id int, title string, completed bool) error {
-	_, err := db.DB.Exec("UPDATE subtasks SET title = ?, completed = ? WHERE id = ?", title, completed, id)
+func UpdateSubtask(id int, title *string, completed *bool) error {
+	// Build a dynamic SET clause so partial updates only touch the fields the
+	// client actually sent — toggling completion must not blank the title.
+	var sets []string
+	var args []interface{}
+	if title != nil {
+		sets = append(sets, "title = ?")
+		args = append(args, *title)
+	}
+	if completed != nil {
+		sets = append(sets, "completed = ?")
+		args = append(args, *completed)
+	}
+	if len(sets) == 0 {
+		return nil // no-op update
+	}
+	args = append(args, id)
+	_, err := db.DB.Exec("UPDATE subtasks SET "+strings.Join(sets, ", ")+" WHERE id = ?", args...)
 	return err
 }
 

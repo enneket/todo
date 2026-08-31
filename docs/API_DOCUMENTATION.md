@@ -117,11 +117,12 @@ The server runs on `http://localhost:8081`.
 - **Response**: `200 OK` `{"id": 1}`
 
 #### `PUT /api/subtasks/{id}`
-- **Description**: Update subtask (e.g., toggle completion).
+- **Description**: Update subtask (e.g., toggle completion). Partial update — only the fields present in the body are changed; omitted fields keep their current values.
 - **Body**:
   ```json
-  { "completed": true, "title": "New Title" }
+  { "completed": true }
   ```
+  or `{ "title": "New Title" }`, or both.
 - **Response**: `200 OK`
 
 #### `DELETE /api/subtasks/{id}`
