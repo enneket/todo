@@ -13,8 +13,12 @@ import (
 )
 
 func setupTestDB(t *testing.T) {
+	// Use a shared in-memory SQLite database. The `cache=shared` pragma makes
+	// every connection in the pool see the same DB; without it each connection
+	// in modernc.org/sqlite gets its own private :memory: database, and
+	// CREATE TABLE / SELECT land on different connections at random.
 	var err error
-	db.DB, err = sql.Open("sqlite", ":memory:")
+	db.DB, err = sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open in-memory database: %v", err)
 	}
@@ -27,6 +31,7 @@ func setupTestDB(t *testing.T) {
 		priority TEXT DEFAULT 'medium',
 		due_date DATETIME,
 		remind_at DATETIME,
+		notified_at DATETIME,
 		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,

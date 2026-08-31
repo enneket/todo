@@ -56,7 +56,7 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		DueDate     *time.Time `json:"due_date"`
 		RemindAt    *time.Time `json:"remind_at"`
 		Repeat      *string    `json:"repeat"`
-		Tags        []string   `json:"tags"`
+		Tags        *[]string  `json:"tags"`
 		ProjectID   *int       `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -71,24 +71,21 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if req.Title != nil {
-		priority := "medium"
-		if req.Priority != nil {
-			priority = *req.Priority
-		}
-		description := ""
-		if req.Description != nil {
-			description = *req.Description
-		}
-		repeat := ""
-		if req.Repeat != nil {
-			repeat = *req.Repeat
-		}
-		tags := []string{}
-		if req.Tags != nil {
-			tags = req.Tags
-		}
-		if err := service.UpdateTodoDetails(id, *req.Title, description, priority, req.DueDate, req.RemindAt, repeat, tags, req.ProjectID); err != nil {
+	// Partial update: any non-nil field gets SET, the rest stay as they are.
+	params := service.UpdateTodoParams{
+		Title:       req.Title,
+		Description: req.Description,
+		Priority:    req.Priority,
+		DueDate:     req.DueDate,
+		RemindAt:    req.RemindAt,
+		Repeat:      req.Repeat,
+		Tags:        req.Tags,
+		ProjectID:   req.ProjectID,
+	}
+	if params.Title != nil || params.Description != nil || params.Priority != nil ||
+		params.DueDate != nil || params.RemindAt != nil || params.Repeat != nil ||
+		params.Tags != nil || params.ProjectID != nil {
+		if err := service.UpdateTodoDetails(id, params); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -10,7 +10,13 @@ var DB *sql.DB
 
 func InitDB(dbPath string) error {
 	var err error
-	DB, err = sql.Open("sqlite", dbPath)
+	// Enable WAL + busy_timeout via DSN pragmas:
+	//   - WAL lets readers proceed concurrently with the single writer, which
+	//     is what removes the "database is locked" errors under HTTP load.
+	//   - busy_timeout makes any write that hits a lock wait up to 5s instead
+	//     of failing immediately, smoothing over short-lived contention.
+	dsn := dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+	DB, err = sql.Open("sqlite", dsn)
 	if err != nil {
 		return err
 	}
@@ -55,6 +61,7 @@ func InitDB(dbPath string) error {
 	DB.Exec(`ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'medium'`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN due_date DATETIME`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN remind_at DATETIME`)
+	DB.Exec(`ALTER TABLE todos ADD COLUMN notified_at DATETIME`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN repeat TEXT DEFAULT ''`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`)
 	DB.Exec(`ALTER TABLE todos ADD COLUMN tags TEXT DEFAULT '[]'`)

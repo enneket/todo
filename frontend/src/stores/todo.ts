@@ -3,7 +3,10 @@ import axios from 'axios'
 import { ref, computed } from 'vue'
 
 export interface Subtask {
-  id: number
+  // id is `number` for server-side subtasks and `string` (UUID) for
+  // temporary subtasks the user added to the form before the parent todo
+  // was created.
+  id: number | string
   todo_id: number
   title: string
   completed: boolean
@@ -18,6 +21,7 @@ export interface Todo {
   priority: 'high' | 'medium' | 'low'
   due_date: string | null
   remind_at: string | null
+  notified_at: string | null
   repeat: string
   tags: string[]
   project_id: number | null

@@ -26,6 +26,7 @@ type Todo struct {
 	Priority    string    `json:"priority"`
 	DueDate     *time.Time `json:"due_date"`
 	RemindAt    *time.Time `json:"remind_at"`
+	NotifiedAt  *time.Time `json:"notified_at"`
 	Repeat      string    `json:"repeat"`
 	Tags        []string  `json:"tags"`
 	ProjectID   *int      `json:"project_id"` // Nullable

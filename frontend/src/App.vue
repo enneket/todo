@@ -100,7 +100,10 @@ const currentProjectName = computed(() => {
 
 // Subtasks Logic
 const newSubtaskTitle = ref('')
-const tempSubtasks = ref<string[]>([])
+// tempSubtasks holds subtasks the user added to the form *before* the parent
+// todo was created. Each entry gets a stable id so deletes never splice the
+// wrong row by array index.
+const tempSubtasks = ref<{ id: string; title: string }[]>([])
 
 onMounted(() => {
   todoStore.fetchTodos()
@@ -187,8 +190,8 @@ const handleSubmit = async () => {
       )
       
       if (newId && tempSubtasks.value.length > 0) {
-          for (const title of tempSubtasks.value) {
-              await todoStore.addSubtask(newId, title)
+          for (const s of tempSubtasks.value) {
+              await todoStore.addSubtask(newId, s.title)
           }
       }
   }
@@ -216,11 +219,11 @@ const deleteProject = async (id: number) => {
 // Subtask Handlers
 const addSubtask = async () => {
   if (!newSubtaskTitle.value.trim()) return
-  
+
   if (form.value.id) {
     await todoStore.addSubtask(form.value.id, newSubtaskTitle.value)
   } else {
-    tempSubtasks.value.push(newSubtaskTitle.value)
+    tempSubtasks.value.push({ id: crypto.randomUUID(), title: newSubtaskTitle.value })
   }
   newSubtaskTitle.value = ''
 }
@@ -231,11 +234,12 @@ const toggleSubtask = async (subtask: Subtask & { isTemp?: boolean }) => {
   await todoStore.updateSubtask(subtask.id, { completed: !subtask.completed })
 }
 
-const deleteSubtask = async (id: number, isTemp: boolean = false) => {
+const deleteSubtask = async (id: number | string, isTemp: boolean = false) => {
   if (isTemp) {
-    tempSubtasks.value.splice(id, 1)
+    const idx = tempSubtasks.value.findIndex(s => s.id === id)
+    if (idx !== -1) tempSubtasks.value.splice(idx, 1)
   } else {
-    await todoStore.deleteSubtask(id)
+    await todoStore.deleteSubtask(id as number)
   }
 }
 
@@ -298,9 +302,9 @@ const displaySubtasks = computed(() => {
     const todo = todoStore.todos.find(t => t.id === form.value.id)
     return todo ? todo.subtasks.map(s => ({ ...s, isTemp: false })) : []
   }
-  return tempSubtasks.value.map((title, index) => ({
-    id: index,
-    title,
+  return tempSubtasks.value.map(s => ({
+    id: s.id,
+    title: s.title,
     completed: false,
     isTemp: true,
     created_at: '',

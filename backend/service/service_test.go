@@ -10,9 +10,12 @@ import (
 )
 
 func setupTestDB(t *testing.T) {
-	// Use in-memory SQLite database for testing
+	// Use a shared in-memory SQLite database. The `cache=shared` pragma makes
+	// every connection in the pool see the same DB; without it each connection
+	// in modernc.org/sqlite gets its own private :memory: database, and
+	// CREATE TABLE / SELECT land on different connections at random.
 	var err error
-	db.DB, err = sql.Open("sqlite", ":memory:")
+	db.DB, err = sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open in-memory database: %v", err)
 	}
@@ -26,6 +29,7 @@ func setupTestDB(t *testing.T) {
 		priority TEXT DEFAULT 'medium',
 		due_date DATETIME,
 		remind_at DATETIME,
+		notified_at DATETIME,
 		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,
@@ -147,14 +151,29 @@ func TestTodoService(t *testing.T) {
 		t.Error("Expected todo to be completed")
 	}
 
-	// Test UpdateTodoDetails
-	err = UpdateTodoDetails(int(id), "Buy Almond Milk", "Updated desc", "low", nil, nil, "", []string{"food"}, nil)
+	// Test UpdateTodoDetails (full payload via UpdateTodoParams)
+	newTitle := "Buy Almond Milk"
+	newDesc := "Updated desc"
+	newPriority := "low"
+	newTags := []string{"food"}
+	err = UpdateTodoDetails(int(id), UpdateTodoParams{
+		Title:       &newTitle,
+		Description: &newDesc,
+		Priority:    &newPriority,
+		Tags:        &newTags,
+	})
 	if err != nil {
 		t.Fatalf("UpdateTodoDetails failed: %v", err)
 	}
 	todos, _ = GetTodos()
 	if todos[0].Title != "Buy Almond Milk" {
 		t.Errorf("Expected updated title 'Buy Almond Milk', got '%s'", todos[0].Title)
+	}
+	if todos[0].Priority != "low" {
+		t.Errorf("Expected priority 'low', got '%s'", todos[0].Priority)
+	}
+	if len(todos[0].Tags) != 1 || todos[0].Tags[0] != "food" {
+		t.Errorf("Expected tags [food], got %v", todos[0].Tags)
 	}
 
 	// Test DeleteTodo
@@ -270,5 +289,144 @@ func TestSubtaskService(t *testing.T) {
 	subtasks, _ = GetSubtasks(todoIDInt)
 	if len(subtasks) != 0 {
 		t.Errorf("Expected 0 subtasks after delete, got %d", len(subtasks))
+	}
+}
+
+func TestGetTodosBatchedSubtasks(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	// Three todos, each with its own subtasks. After GetTodos every todo must
+	// end up with only its own subtasks — i.e. the batch IN-query joined them
+	// correctly and didn't smear subtasks across todos.
+	todo1, _ := CreateTodo("Task 1", "", "medium", nil, nil, "", nil, nil)
+	todo2, _ := CreateTodo("Task 2", "", "medium", nil, nil, "", nil, nil)
+	todo3, _ := CreateTodo("Task 3", "", "medium", nil, nil, "", nil, nil)
+
+	CreateSubtask(int(todo1), "1.a")
+	CreateSubtask(int(todo1), "1.b")
+	CreateSubtask(int(todo2), "2.a")
+	CreateSubtask(int(todo3), "3.a")
+	CreateSubtask(int(todo3), "3.b")
+	CreateSubtask(int(todo3), "3.c")
+
+	todos, err := GetTodos()
+	if err != nil {
+		t.Fatalf("GetTodos failed: %v", err)
+	}
+	if len(todos) != 3 {
+		t.Fatalf("Expected 3 todos, got %d", len(todos))
+	}
+
+	counts := map[int]int{}
+	titles := map[int][]string{}
+	for _, td := range todos {
+		counts[td.ID] = len(td.Subtasks)
+		for _, s := range td.Subtasks {
+			titles[td.ID] = append(titles[td.ID], s.Title)
+		}
+	}
+	if counts[int(todo1)] != 2 {
+		t.Errorf("todo1 expected 2 subtasks, got %d (titles=%v)", counts[int(todo1)], titles[int(todo1)])
+	}
+	if counts[int(todo2)] != 1 {
+		t.Errorf("todo2 expected 1 subtask, got %d (titles=%v)", counts[int(todo2)], titles[int(todo2)])
+	}
+	if counts[int(todo3)] != 3 {
+		t.Errorf("todo3 expected 3 subtasks, got %d (titles=%v)", counts[int(todo3)], titles[int(todo3)])
+	}
+}
+
+func TestTodoPartialUpdate(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	// Seed a todo with every field populated so we can detect any unwanted wipe.
+	due := time.Now().Add(24 * time.Hour)
+	id, err := CreateTodo("Original", "Original desc", "medium", &due, nil, "weekly", []string{"work", "urgent"}, nil)
+	if err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// Update only the title — everything else must stay intact.
+	newTitle := "Just the title"
+	if err := UpdateTodoDetails(int(id), UpdateTodoParams{Title: &newTitle}); err != nil {
+		t.Fatalf("UpdateTodoDetails failed: %v", err)
+	}
+
+	todos, _ := GetTodos()
+	if len(todos) != 1 {
+		t.Fatalf("Expected 1 todo, got %d", len(todos))
+	}
+	td := todos[0]
+	if td.Title != "Just the title" {
+		t.Errorf("title not updated: got %q", td.Title)
+	}
+	if td.Description != "Original desc" {
+		t.Errorf("description was wiped: got %q", td.Description)
+	}
+	if td.Priority != "medium" {
+		t.Errorf("priority was wiped: got %q", td.Priority)
+	}
+	if td.Repeat != "weekly" {
+		t.Errorf("repeat was wiped: got %q", td.Repeat)
+	}
+	if len(td.Tags) != 2 {
+		t.Errorf("tags were wiped: got %v", td.Tags)
+	}
+	if td.DueDate == nil || !td.DueDate.Equal(due) {
+		t.Errorf("due_date was wiped: got %v want %v", td.DueDate, due)
+	}
+
+	// Empty params is a valid no-op (no SET clauses emitted).
+	if err := UpdateTodoDetails(int(id), UpdateTodoParams{}); err != nil {
+		t.Errorf("empty UpdateTodoParams should not error, got %v", err)
+	}
+}
+
+func TestNotificationDedup(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	// Stub out the actual desktop-notification dispatch — beeep.Notify blocks
+	// on dbus in headless environments.
+	origNotify := sendNotification
+	sendNotification = func(title, description string) error { return nil }
+	defer func() { sendNotification = origNotify }()
+
+	// Create a todo whose remind_at falls inside the [now, now+1m) window.
+	remindAt := time.Now().UTC().Add(10 * time.Second)
+	id, err := CreateTodo("Reminder", "", "high", nil, &remindAt, "", nil, nil)
+	if err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// First scan: should mark notified_at.
+	checkReminders()
+	todos, _ := GetTodos()
+	if len(todos) != 1 {
+		t.Fatalf("Expected 1 todo, got %d", len(todos))
+	}
+	if todos[0].NotifiedAt == nil {
+		t.Fatal("Expected notified_at to be set after first checkReminders")
+	}
+	firstNotified := *todos[0].NotifiedAt
+
+	// Second scan: query filters out notified_at IS NOT NULL, so notified_at
+	// should stay unchanged even if the window keeps sliding.
+	time.Sleep(20 * time.Millisecond)
+	checkReminders()
+	todos, _ = GetTodos()
+	if todos[0].NotifiedAt == nil || !todos[0].NotifiedAt.Equal(firstNotified) {
+		t.Errorf("notified_at should not be overwritten by a subsequent scan; got %v want %v", todos[0].NotifiedAt, firstNotified)
+	}
+
+	// After UpdateTodoDetails, notified_at should reset so the user gets reminded again.
+	if err := UpdateTodoDetails(int(id), UpdateTodoParams{RemindAt: &remindAt}); err != nil {
+		t.Fatalf("UpdateTodoDetails failed: %v", err)
+	}
+	todos, _ = GetTodos()
+	if todos[0].NotifiedAt != nil {
+		t.Errorf("Expected notified_at to be reset to NULL after UpdateTodoDetails, got %v", todos[0].NotifiedAt)
 	}
 }
