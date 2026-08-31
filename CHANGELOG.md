@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2026-08-31
+
+### Added
+
+#### ✨ Features
+- **Tag System**: Introduced a tag system with tag filtering to organize and filter tasks.
+- **Statistics Page**: Moved statistics into a dedicated page in the sidebar navigation.
+- **Subtask UX**: Inline completion and double-click title editing on subtask cards; temporary subtasks skip server calls until the parent todo is saved.
+- **Date Picker**: Switched to `@vuepic/vue-datepicker` for a better date picking experience.
+
+#### 🐛 Bug Fixes
+- **Subtask Partial Updates**: Fixed subtask title being cleared on partial updates.
+- **Code Review Cleanups**: Fixed multiple issues found in code review (priority medium/low handling, Subtasks `omitempty`, filter type assertions).
+
+### Changed
+
+#### 🔧 Refactoring
+- **Backend**: Replaced positional parameters with a `CreateTodoParams` struct.
+
 ## [0.1.4] - 2026-01-21
 
 ### Added
