@@ -23,6 +23,7 @@ describe('useTodoFilter', () => {
     priority: 'medium',
     due_date: null,
     remind_at: null,
+    notified_at: null,
     repeat: '',
     tags: [],
     project_id: null,

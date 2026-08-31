@@ -138,7 +138,9 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  const updateSubtask = async (id: number, updates: Partial<Subtask>) => {
+  const updateSubtask = async (id: number | string, updates: Partial<Subtask>) => {
+    // Skip the server call for in-memory temp subtasks.
+    if (typeof id !== 'number') return
     const ok = await tracked('updateSubtask', axios.put(`${SUBTASK_API_URL}/${id}`, updates))
     if (ok === null) return
     // Find which todo owns this subtask and patch in place.
