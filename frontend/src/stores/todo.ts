@@ -54,8 +54,14 @@ export const useTodoStore = defineStore('todo', () => {
   async function tracked<T>(label: string, p: Promise<T>): Promise<T | null> {
     try {
       return await p
-    } catch (err: any) {
-      lastError.value = `${label}: ${err?.response?.data || err?.message || 'unknown error'}`
+    } catch (err: unknown) {
+      let message = 'unknown error'
+      if (axios.isAxiosError(err)) {
+        message = String(err.response?.data || err.message)
+      } else if (err instanceof Error) {
+        message = err.message
+      }
+      lastError.value = `${label}: ${message}`
       console.error(lastError.value, err)
       return null
     }
@@ -104,7 +110,7 @@ export const useTodoStore = defineStore('todo', () => {
 
   const updateTodo = async (id: number, updates: Partial<Todo>) => {
     if (updates.due_date === '') {
-      updates.due_date = null as any
+      updates.due_date = null
     }
     const response = await tracked(
       'updateTodo',
