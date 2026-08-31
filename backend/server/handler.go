@@ -19,7 +19,7 @@ func GetTodosHandler(w http.ResponseWriter, r *http.Request) {
 	if todos == nil {
 		todos = []db.Todo{}
 	}
-	json.NewEncoder(w).Encode(todos)
+	writeJSON(w, todos)
 }
 
 func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(todo)
+	writeJSON(w, todo)
 }
 
 func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +107,15 @@ func UpdateTodoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Return the updated todo in full so the client can patch it in place
+	// without re-GETting the list.
+	todo, err := service.GetTodo(id)
+	if err != nil {
+		log.Printf("GetTodo(%d) after update failed: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, todo)
 }
 
 func DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {

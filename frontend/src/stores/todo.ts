@@ -106,16 +106,17 @@ export const useTodoStore = defineStore('todo', () => {
     if (updates.due_date === '') {
       updates.due_date = null as any
     }
-    const ok = await tracked(
+    const response = await tracked(
       'updateTodo',
-      axios.put(`${API_URL}/${id}`, updates)
+      axios.put<Todo>(`${API_URL}/${id}`, updates)
     )
-    if (ok === null) return
-    // Patch the row in-place. `completed` flips via a partial update; we trust
-    // the optimistic local value since the server already accepted it.
+    if (!response) return
+    // Replace the row in place with whatever the server returned — that way
+    // server-side defaults (e.g. notified_at reset, repeat reschedule) are
+    // reflected immediately without an extra GET.
     const idx = todos.value.findIndex(t => t.id === id)
     if (idx !== -1) {
-      todos.value[idx] = { ...todos.value[idx], ...updates, notified_at: null }
+      todos.value[idx] = response.data
     }
   }
 

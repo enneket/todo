@@ -245,6 +245,25 @@ func TestUpdateDeleteTodoHandler(t *testing.T) {
 		t.Errorf("UpdateTodoHandler returned wrong status: %v", rr.Code)
 	}
 
+	// PUT must return the full updated todo, not an empty body — the frontend
+	// patches the response into its in-memory list.
+	var updated map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("PUT response not valid JSON: %v (body=%q)", err, rr.Body.String())
+	}
+	if updated["id"] != float64(1) {
+		t.Errorf("Expected PUT response id=1, got %v", updated["id"])
+	}
+	if updated["title"] != "To Update" {
+		t.Errorf("Expected PUT response title='To Update', got %v", updated["title"])
+	}
+	if updated["completed"] != true {
+		t.Errorf("Expected PUT response completed=true, got %v", updated["completed"])
+	}
+	if _, ok := updated["subtasks"]; !ok {
+		t.Errorf("Expected PUT response to include subtasks field, got %v", updated)
+	}
+
 	// Delete
 	req, _ = http.NewRequest("DELETE", "/api/todos/1", nil)
 	rr = httptest.NewRecorder()

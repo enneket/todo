@@ -242,5 +242,10 @@ func GetTodo(id int) (db.Todo, error) {
 	} else {
 		t.Subtasks = []db.Subtask{}
 	}
+	// Always emit an empty array (not null) for consistency with GetTodos —
+	// the frontend relies on `subtasks` being iterable.
+	if t.Subtasks == nil {
+		t.Subtasks = []db.Subtask{}
+	}
 	return t, nil
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTodoStore } from '../stores/todo'
 import { storeToRefs } from 'pinia'
 import { PhCaretLeft, PhCaretRight, PhCheckCircle, PhCircle } from '@phosphor-icons/vue'
@@ -11,6 +11,13 @@ const { todos } = storeToRefs(todoStore)
 
 const viewMode = ref<'month' | 'week'>('month')
 const currentDate = ref(new Date())
+
+// Switching view mode (e.g. month → week) while parked on, say, the 20th of
+// the month would otherwise anchor the week view to a week that doesn't
+// contain today. Reset to today so the user always lands on the current week.
+watch(viewMode, () => {
+  currentDate.value = new Date()
+})
 
 // Helper to get start of week (Sunday)
 const getStartOfWeek = (date: Date) => {

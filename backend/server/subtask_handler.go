@@ -35,7 +35,7 @@ func CreateSubtaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(sub)
+	writeJSON(w, sub)
 }
 
 func UpdateSubtaskHandler(w http.ResponseWriter, r *http.Request) {

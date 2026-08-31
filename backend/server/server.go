@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -21,6 +22,16 @@ func pathID(w http.ResponseWriter, r *http.Request, param string) (int, bool) {
 
 // maxBodyBytes caps the size of any request body the API will read.
 const maxBodyBytes = 1 << 20 // 1 MiB
+
+// writeJSON marshals v and writes it. The encoding step is the one place
+// where we can fail mid-response — typically only if the client has
+// disconnected. We can't change the status code at that point, but we can
+// log it so we know something went wrong.
+func writeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("response encode failed: %v", err)
+	}
+}
 
 // Server owns the http.Server instance for the app. Holding it on a struct
 // (instead of a package-level var) makes shutdown lifecycle explicit and

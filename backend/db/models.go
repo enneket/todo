@@ -30,6 +30,6 @@ type Todo struct {
 	Repeat      string    `json:"repeat"`
 	Tags        []string  `json:"tags"`
 	ProjectID   *int      `json:"project_id"` // Nullable
-	Subtasks    []Subtask `json:"subtasks,omitempty"` // For API response
+	Subtasks    []Subtask `json:"subtasks"` // Always serialize (no omitempty — empty slice must round-trip as `[]`)
 	CreatedAt   time.Time `json:"created_at"`
 }

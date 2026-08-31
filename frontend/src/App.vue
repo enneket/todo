@@ -319,8 +319,6 @@ const getRepeatLabel = (value: string) => {
     const opt = repeatOptions.value.find(o => o.value === value)
     return opt ? opt.label : value
 }
-// Ignore unused warning for now as it's used in template
-void getRepeatLabel
 
 
 const displaySubtasks = computed(() => {

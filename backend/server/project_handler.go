@@ -18,7 +18,7 @@ func GetProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	if projects == nil {
 		projects = []db.Project{}
 	}
-	json.NewEncoder(w).Encode(projects)
+	writeJSON(w, projects)
 }
 
 func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]int64{"id": id})
+	writeJSON(w, map[string]int64{"id": id})
 }
 
 func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
