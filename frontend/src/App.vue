@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, nextTick, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTodoStore, type Todo, type Subtask } from './stores/todo'
 import { useThemeStore } from './stores/theme'
@@ -9,7 +9,7 @@ import {
   PhClock, PhMagnifyingGlass, PhWarning, PhChartBar, PhSun, PhMoon, 
   PhDesktop, PhList, PhFolder, PhCheckSquare, PhX, PhBell, PhArrowsClockwise,
   PhCalendar, PhCalendarCheck, PhWarningCircle, PhSortAscending, PhSortDescending,
-  PhTag
+  PhTag, PhCaretDown, PhSquare
 } from '@phosphor-icons/vue'
 import BaseSelect from './components/BaseSelect.vue'
 import StatisticsPanel from './components/StatisticsPanel.vue'
@@ -134,7 +134,44 @@ const currentProjectName = computed(() => {
 })
 
 // Subtasks Logic
+// Expanded subtask checklist panel on todo cards (single-open).
+const expandedSubtaskTodoId = ref<number | null>(null)
+const toggleSubtaskPanel = (todoId: number) => {
+  expandedSubtaskTodoId.value = expandedSubtaskTodoId.value === todoId ? null : todoId
+}
 const newSubtaskTitle = ref('')
+// Inline title editing for subtasks (double-click to edit).
+const editingSubtask = ref<{ id: number | string; title: string } | null>(null)
+const editingSubtaskTitle = ref('')
+const subtaskEditInput = ref<HTMLInputElement | null>(null)
+
+const startEditSubtask = async (subtask: Subtask & { isTemp?: boolean }) => {
+  // Temp subtasks added to the form before the parent todo exists are not editable.
+  if (subtask.isTemp) return
+  editingSubtask.value = { id: subtask.id, title: subtask.title }
+  editingSubtaskTitle.value = subtask.title
+  await nextTick()
+  subtaskEditInput.value?.focus()
+  subtaskEditInput.value?.select()
+}
+
+const saveEditSubtask = async () => {
+  const current = editingSubtask.value
+  if (!current) return
+  const title = editingSubtaskTitle.value.trim()
+  editingSubtask.value = null
+  editingSubtaskTitle.value = ''
+  // Empty title or no change just closes the editor.
+  if (title && title !== current.title) {
+    await todoStore.updateSubtask(current.id, { title })
+  }
+}
+
+const cancelEditSubtask = () => {
+  if (!editingSubtask.value) return
+  editingSubtask.value = null
+  editingSubtaskTitle.value = ''
+}
 // tempSubtasks holds subtasks the user added to the form *before* the parent
 // todo was created. Each entry gets a stable id so deletes never splice the
 // wrong row by array index.
@@ -689,13 +726,55 @@ const displaySubtasks = computed(() => {
                       </p>
                       
                       <!-- Subtasks Preview -->
-                      <div v-if="todo.subtasks && todo.subtasks.length > 0" class="mt-3 space-y-1">
-                        <div class="flex items-center gap-2 text-xs text-slate-500">
-                          <PhCheckSquare weight="bold" />
-                          <span>{{ todo.subtasks.filter(s => s.completed).length }}/{{ todo.subtasks.length }}</span>
-                        </div>
-                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div v-if="todo.subtasks && todo.subtasks.length > 0" class="mt-3">
+                        <button
+                          @click="toggleSubtaskPanel(todo.id)"
+                          class="w-full flex items-center justify-between gap-2 text-xs text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                          :aria-expanded="expandedSubtaskTodoId === todo.id"
+                          :aria-label="t('subtasks')"
+                        >
+                          <span class="flex items-center gap-2">
+                            <PhCheckSquare weight="bold" />
+                            <span>{{ todo.subtasks.filter(s => s.completed).length }}/{{ todo.subtasks.length }}</span>
+                          </span>
+                          <PhCaretDown size="12" weight="bold" class="transition-transform duration-200" :class="{ 'rotate-180': expandedSubtaskTodoId === todo.id }" />
+                        </button>
+                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
                           <div class="h-full bg-primary-500 transition-all duration-300" :style="{ width: `${(todo.subtasks.filter(s => s.completed).length / todo.subtasks.length) * 100}%` }"></div>
+                        </div>
+                        <!-- Inline Checklist -->
+                        <div v-if="expandedSubtaskTodoId === todo.id" class="mt-3 space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <div
+                            v-for="subtask in todo.subtasks"
+                            :key="subtask.id"
+                            class="flex items-center gap-2.5"
+                          >
+                            <button
+                              @click="todoStore.updateSubtask(subtask.id, { completed: !subtask.completed })"
+                              class="text-slate-400 hover:text-primary-500 transition-colors flex-shrink-0"
+                              :aria-label="subtask.completed ? t('mark_incomplete') : t('mark_complete')"
+                            >
+                              <PhCheckSquare v-if="subtask.completed" weight="fill" class="text-primary-500" size="16" />
+                              <PhSquare v-else size="16" />
+                            </button>
+                            <input
+                              v-if="editingSubtask?.id === subtask.id"
+                              v-model="editingSubtaskTitle"
+                              ref="subtaskEditInput"
+                              @keydown.enter.prevent="saveEditSubtask"
+                              @keydown.esc.prevent="cancelEditSubtask"
+                              @blur="cancelEditSubtask"
+                              class="flex-1 min-w-0 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
+                            />
+                            <span
+                              v-else
+                              class="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                              :class="{ 'line-through text-slate-400': subtask.completed }"
+                              @dblclick="startEditSubtask(subtask)"
+                            >
+                              {{ subtask.title }}
+                            </span>
+                          </div>
                         </div>
                       </div>
                   </div>
@@ -849,11 +928,22 @@ const displaySubtasks = computed(() => {
                           :class="{ 'cursor-default': subtask.isTemp }"
                         >
                           <PhCheckSquare v-if="subtask.completed" weight="fill" class="text-primary-500" size="20" />
-                          <PhCheckSquare v-else size="20" />
+                          <PhSquare v-else size="20" />
                         </button>
+                        <input
+                          v-if="editingSubtask?.id === subtask.id"
+                          v-model="editingSubtaskTitle"
+                          ref="subtaskEditInput"
+                          @keydown.enter.prevent="saveEditSubtask"
+                          @keydown.esc.prevent="cancelEditSubtask"
+                          @blur="cancelEditSubtask"
+                          class="flex-1 min-w-0 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
+                        />
                         <span 
+                          v-else
                           class="flex-1 text-sm text-slate-700 dark:text-slate-300"
                           :class="{ 'line-through text-slate-400': subtask.completed }"
+                          @dblclick="startEditSubtask(subtask)"
                         >
                           {{ subtask.title }}
                         </span>
