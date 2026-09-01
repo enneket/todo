@@ -197,6 +197,13 @@ jobs:
         run: |
           npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version --allow-same-version
 
+      # 同步 wails.json 的 version 字段，否则 Windows / macOS 二进制嵌入的产品版本会停留在旧值。
+      - name: Update wails.json version
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' wails.json > wails.json.tmp && mv wails.json.tmp wails.json
+          cat wails.json
+
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
@@ -227,6 +234,14 @@ jobs:
         if: matrix.platform == 'darwin'
         run: |
           wails build -platform darwin/universal
+
+          # 与 Linux / Windows 对齐：构建后校验 .app 包是否生成。
+          if [ ! -d "build/bin/todo.app" ] && [ ! -d "build/bin/TodoApp.app" ]; then
+            echo "❌ macOS artifact missing. Expected build/bin/todo.app"
+            ls -la build/bin/ || true
+            exit 1
+          fi
+          echo "✅ macOS artifact found"
 
       - name: Create installer (Windows)
         if: matrix.platform == 'windows'
