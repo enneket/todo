@@ -17,7 +17,7 @@ func InitDB(dbPath string) error {
 	//     is what removes the "database is locked" errors under HTTP load.
 	//   - busy_timeout makes any write that hits a lock wait up to 5s instead
 	//     of failing immediately, smoothing over short-lived contention.
-	dsn := dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+	dsn := dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)"
 	DB, err = sql.Open("sqlite", dsn)
 	if err != nil {
 		return err
@@ -71,6 +71,8 @@ func InitDB(dbPath string) error {
 		`ALTER TABLE todos ADD COLUMN description TEXT DEFAULT ''`,
 		`ALTER TABLE todos ADD COLUMN tags TEXT DEFAULT '[]'`,
 		`ALTER TABLE todos ADD COLUMN project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`,
+		`ALTER TABLE todos ADD COLUMN deleted_at DATETIME`,
+		`ALTER TABLE projects ADD COLUMN deleted_at DATETIME`,
 	} {
 		if _, err := DB.Exec(stmt); err != nil {
 			if !isDuplicateColumnErr(err) {

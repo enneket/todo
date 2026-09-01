@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"todo/backend/db"
+	"todo/backend/service"
 
 	_ "modernc.org/sqlite"
 )
@@ -35,7 +36,8 @@ func setupTestDB(t *testing.T) {
 		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		deleted_at DATETIME
 	);`
 	if _, err := db.DB.Exec(createTableSQL); err != nil {
 		t.Fatalf("Failed to create todos table: %v", err)
@@ -46,7 +48,8 @@ func setupTestDB(t *testing.T) {
 		name TEXT NOT NULL,
 		description TEXT DEFAULT '',
 		color TEXT DEFAULT '#64748B',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		deleted_at DATETIME
 	);`
 	if _, err := db.DB.Exec(createProjectsTableSQL); err != nil {
 		t.Fatalf("Failed to create projects table: %v", err)
@@ -85,6 +88,45 @@ func TestGetTodosHandler(t *testing.T) {
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
+	}
+}
+
+func TestGetTodosHandlerSearch(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	if _, err := service.CreateTodo(service.CreateTodoParams{Title: "Alpha task"}); err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+	if _, err := service.CreateTodo(service.CreateTodoParams{Title: "Beta task"}); err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// ?q= filters server-side.
+	req, _ := http.NewRequest("GET", "/api/todos?q=alpha", nil)
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(GetTodosHandler).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	var todos []map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &todos); err != nil {
+		t.Fatalf("response not valid JSON: %v", err)
+	}
+	if len(todos) != 1 || todos[0]["title"] != "Alpha task" {
+		t.Errorf("Expected only 'Alpha task' for q=alpha, got %v", todos)
+	}
+
+	// Without q the full list comes back.
+	req, _ = http.NewRequest("GET", "/api/todos", nil)
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(GetTodosHandler).ServeHTTP(rr, req)
+	if err := json.Unmarshal(rr.Body.Bytes(), &todos); err != nil {
+		t.Fatalf("response not valid JSON: %v", err)
+	}
+	if len(todos) != 2 {
+		t.Errorf("Expected 2 todos without q, got %d", len(todos))
 	}
 }
 

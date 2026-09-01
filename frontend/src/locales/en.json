@@ -58,5 +58,14 @@
   "sort_priority": "Priority",
   "ascending": "Ascending",
   "descending": "Descending",
-  "no_tags": "No tags yet"
+  "no_tags": "No tags yet",
+  "trash": "Trash",
+  "restore": "Restore",
+  "purge": "Delete forever",
+  "deleted_at": "Deleted at",
+  "deleted_tasks": "Deleted tasks",
+  "deleted_projects": "Deleted projects",
+  "trash_empty": "The trash is empty",
+  "confirm_purge_todo": "Permanently delete this task? This cannot be undone.",
+  "confirm_purge_project": "Permanently delete this project and all its tasks? This cannot be undone."
 }

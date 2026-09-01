@@ -11,7 +11,9 @@ The server runs on `http://localhost:8081`.
 ### Todos
 
 #### `GET /api/todos`
-- **Description**: Fetch all todos.
+- **Description**: Fetch all todos, optionally filtered by a search keyword.
+- **Query Parameters**:
+  - `q` (optional): Search keyword. Case-insensitive substring match against `title`, `description`, and `tags` (e.g. `GET /api/todos?q=milk`). The keyword is matched literally — `%`, `_`, and `\` are not treated as wildcards. Omit (or send empty) for the full list.
 - **Response**: `200 OK`
   ```json
   [
@@ -58,6 +60,7 @@ The server runs on `http://localhost:8081`.
   ```
 
 #### `DELETE /api/todos/{id}`
+- **Description**: Soft delete — moves the todo to the trash (see Trash section). The row stays in the database until purged.
 - **Response**: `200 OK`
 
 ---
@@ -102,6 +105,35 @@ The server runs on `http://localhost:8081`.
 - **Response**: `200 OK`
 
 #### `DELETE /api/projects/{id}`
+- **Description**: Soft delete — moves the project and every todo under it to the trash (see Trash section). The rows stay in the database until purged.
+- **Response**: `200 OK`
+
+---
+
+### Trash
+
+#### `GET /api/trash/todos`
+- **Description**: Fetch all soft-deleted todos, newest deletion first.
+- **Response**: `200 OK` — array of todos (same shape as `GET /api/todos`, without subtask batching), each carrying `deleted_at`.
+
+#### `GET /api/trash/projects`
+- **Description**: Fetch all soft-deleted projects, newest deletion first.
+- **Response**: `200 OK` — array of projects, each carrying `deleted_at`.
+
+#### `POST /api/trash/todos/{id}/restore`
+- **Description**: Restore a trashed todo to the normal list. If its project is also in the trash, the project is restored first so the todo never points at a deleted project; the project's other todos stay in the trash.
+- **Response**: `200 OK`
+
+#### `POST /api/trash/projects/{id}/restore`
+- **Description**: Restore a trashed project. Its todos are left in the trash and can be restored individually via `POST /api/trash/todos/{id}/restore`.
+- **Response**: `200 OK`
+
+#### `DELETE /api/trash/todos/{id}`
+- **Description**: Permanently delete a trashed todo (subtasks are cascade-deleted). Only works on rows already in the trash.
+- **Response**: `200 OK`
+
+#### `DELETE /api/trash/projects/{id}`
+- **Description**: Permanently delete a trashed project and all its todos.
 - **Response**: `200 OK`
 
 ---
@@ -136,3 +168,4 @@ The server runs on `http://localhost:8081`.
 | `id` | `int` | Unique identifier (Auto-increment) |
 | `title` | `string` | The task description |
 | `completed` | `boolean` | Status of the task |
+| `deleted_at` | `datetime` or `null` | Soft-delete timestamp; `null` for active todos, set while the todo is in the trash |

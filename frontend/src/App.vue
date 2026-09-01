@@ -124,6 +124,7 @@ const currentProjectName = computed(() => {
   if (currentView.value === 'overdue') return t('overdue')
   if (currentView.value === 'calendar') return t('calendar')
   if (currentView.value === 'statistics') return t('statistics')
+  if (currentView.value === 'trash') return t('trash')
   if (currentView.value === 'tag' && currentTag.value) return `# ${currentTag.value}`
   
   if (currentView.value === 'project' && currentProjectId.value) {
@@ -314,6 +315,49 @@ const deleteProject = async (id: number) => {
   }
 }
 
+// Trash (soft-deleted items) handlers
+const showTrash = async () => {
+  currentView.value = 'trash'
+  currentProjectId.value = null
+  await Promise.all([todoStore.fetchTrashTodos(), projectStore.fetchTrashProjects()])
+}
+
+const formatDeletedAt = (value: string | null): string => {
+  if (!value) return ''
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? '' : d.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US')
+}
+
+const restoreTodo = async (id: number) => {
+  await todoStore.restoreTrashTodo(id)
+  // Restoring a todo may pull its (trashed) project back too, so refresh the
+  // normal lists as well as the project trash to keep the trash view in sync.
+  await Promise.all([
+    todoStore.fetchTodos(),
+    projectStore.fetchProjects(),
+    projectStore.fetchTrashProjects(),
+  ])
+}
+
+const restoreProject = async (id: number) => {
+  await projectStore.restoreTrashProject(id)
+  // Restoring a project leaves its todos in the trash — only the project
+  // list changes.
+  await projectStore.fetchProjects()
+}
+
+const purgeTodo = async (id: number) => {
+  const ok = await openConfirm(t('confirm_purge_todo') || 'Permanently delete this task? This cannot be undone.')
+  if (!ok) return
+  await todoStore.purgeTrashTodo(id)
+}
+
+const purgeProject = async (id: number) => {
+  const ok = await openConfirm(t('confirm_purge_project') || 'Permanently delete this project and all its tasks? This cannot be undone.')
+  if (!ok) return
+  await projectStore.purgeTrashProject(id)
+}
+
 // Subtask Handlers
 const addSubtask = async () => {
   if (!newSubtaskTitle.value.trim()) return
@@ -485,12 +529,20 @@ const displaySubtasks = computed(() => {
             <PhChartBar size="18" />
             {{ t('statistics') || 'Statistics' }}
           </button>
+          <button
+            @click="showTrash"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            :class="currentView === 'trash' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'"
+          >
+            <PhTrash size="18" />
+            {{ t('trash') || 'Trash' }}
+          </button>
         </nav>
 
         <div class="mt-8">
           <div class="flex items-center justify-between px-3 mb-2">
-            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('projects') || 'Projects' }}</h3>
-            <button @click="showProjectModal = true" class="text-slate-500 hover:text-primary-500 transition-colors" :aria-label="t('add_project') || 'Add Project'">
+            <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ t('projects') || 'Projects' }}</h3>
+            <button @click="showProjectModal = true" class="text-slate-500 dark:text-slate-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors" :aria-label="t('add_project') || 'Add Project'">
               <PhPlus size="14" weight="bold" />
             </button>
           </div>
@@ -506,7 +558,7 @@ const displaySubtasks = computed(() => {
                 <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: project.color }"></span>
                 {{ project.name }}
               </div>
-              <button @click.stop="deleteProject(project.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500" :aria-label="t('delete') || 'Delete'">
+              <button @click.stop="deleteProject(project.id)" class="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400" :aria-label="t('delete') || 'Delete'">
                 <PhX size="14" />
               </button>
             </div>
@@ -515,7 +567,7 @@ const displaySubtasks = computed(() => {
 
         <div class="mt-8">
           <div class="flex items-center justify-between px-3 mb-2">
-            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('tags_label') || 'Tags' }}</h3>
+            <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ t('tags_label') || 'Tags' }}</h3>
           </div>
           <nav class="space-y-1">
             <div 
@@ -553,7 +605,7 @@ const displaySubtasks = computed(() => {
           
           <div class="flex items-center gap-3">
               <div class="relative group">
-                  <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-600 transition-colors" size="18" />
+                  <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 group-focus-within:text-primary-600 dark:group-focus-within:text-primary-400 transition-colors" size="18" />
                   <input
                       v-model="searchQuery"
                       type="text"
@@ -562,13 +614,15 @@ const displaySubtasks = computed(() => {
                       class="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 focus:border-primary-500 w-40 focus:w-64 transition-all shadow-sm dark:text-white dark:placeholder-slate-500 text-slate-700"
                   />
               </div>
+              <div class="relative">
               <button
                 @click="showSortMenu = !showSortMenu"
-                class="relative p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
+                class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
                 :aria-label="t('sort_by')"
               >
                 <PhSortAscending v-if="sortOption === 'due_asc'" size="24" />
                 <PhSortDescending v-else size="24" />
+              </button>
                 
                 <!-- Sort Menu -->
                 <div v-if="showSortMenu" class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 overflow-hidden">
@@ -589,7 +643,7 @@ const displaySubtasks = computed(() => {
                         <PhCheckCircle v-if="sortOption === 'priority_desc'" weight="fill" size="16" />
                     </button>
                 </div>
-              </button>
+              </div>
               <button
                 @click="themeStore.toggleTheme()"
                 class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm rounded-full transition-all"
@@ -619,6 +673,87 @@ const displaySubtasks = computed(() => {
 
         <div v-else-if="currentView === 'statistics'" class="space-y-8">
           <StatisticsPanel />
+        </div>
+
+        <div v-else-if="currentView === 'trash'" class="space-y-8">
+          <!-- Deleted tasks -->
+          <section>
+            <h3 class="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <PhTrash size="16" /> {{ t('deleted_tasks') }}
+            </h3>
+            <div v-if="todoStore.trashTodos.length === 0" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 text-center text-slate-400 dark:text-slate-500 italic">
+              {{ t('trash_empty') }}
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="todo in todoStore.trashTodos"
+                :key="todo.id"
+                class="group flex items-center justify-between gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm px-4 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="font-medium text-slate-800 dark:text-slate-100 truncate">{{ todo.title }}</p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ t('deleted_at') }}: {{ formatDeletedAt(todo.deleted_at) }}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    @click="restoreTodo(todo.id)"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+                    :aria-label="t('restore') || 'Restore'"
+                  >
+                    <PhArrowsClockwise size="16" /> {{ t('restore') || 'Restore' }}
+                  </button>
+                  <button
+                    @click="purgeTodo(todo.id)"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    :aria-label="t('purge') || 'Delete forever'"
+                  >
+                    <PhX size="16" /> {{ t('purge') || 'Delete forever' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Deleted projects -->
+          <section>
+            <h3 class="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <PhFolder size="16" /> {{ t('deleted_projects') }}
+            </h3>
+            <div v-if="projectStore.trashProjects.length === 0" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 text-center text-slate-400 dark:text-slate-500 italic">
+              {{ t('trash_empty') }}
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="project in projectStore.trashProjects"
+                :key="project.id"
+                class="group flex items-center justify-between gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm px-4 py-3"
+              >
+                <div class="min-w-0 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: project.color }"></span>
+                  <div class="min-w-0">
+                    <p class="font-medium text-slate-800 dark:text-slate-100 truncate">{{ project.name }}</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ t('deleted_at') }}: {{ formatDeletedAt(project.deleted_at) }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    @click="restoreProject(project.id)"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+                    :aria-label="t('restore') || 'Restore'"
+                  >
+                    <PhArrowsClockwise size="16" /> {{ t('restore') || 'Restore' }}
+                  </button>
+                  <button
+                    @click="purgeProject(project.id)"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    :aria-label="t('purge') || 'Delete forever'"
+                  >
+                    <PhX size="16" /> {{ t('purge') || 'Delete forever' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
 
         <div v-else class="space-y-8">
@@ -665,7 +800,7 @@ const displaySubtasks = computed(() => {
                           class="mt-1 text-slate-400 dark:text-slate-600 hover:text-primary-500 transition-colors flex-shrink-0"
                           :aria-label="todo.completed ? t('mark_incomplete') : t('mark_complete')"
                       >
-                          <PhCheckCircle v-if="todo.completed" weight="fill" class="text-emerald-500 scale-110" size="24" />
+                          <PhCheckCircle v-if="todo.completed" weight="fill" class="text-emerald-500 dark:text-emerald-400 scale-110" size="24" />
                           <PhCircle v-else weight="bold" size="24" />
                       </button>
 
@@ -742,7 +877,7 @@ const displaySubtasks = computed(() => {
                           >
                             <button
                               @click="todoStore.updateSubtask(subtask.id, { completed: !subtask.completed })"
-                              class="text-slate-400 hover:text-primary-500 transition-colors flex-shrink-0"
+                              class="text-slate-400 dark:text-slate-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors flex-shrink-0"
                               :aria-label="subtask.completed ? t('mark_incomplete') : t('mark_complete')"
                             >
                               <PhCheckSquare v-if="subtask.completed" weight="fill" class="text-primary-500" size="16" />
@@ -760,7 +895,7 @@ const displaySubtasks = computed(() => {
                             <span
                               v-else
                               class="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                              :class="{ 'line-through text-slate-400': subtask.completed }"
+                              :class="{ 'line-through text-slate-400 dark:text-slate-600': subtask.completed }"
                               @dblclick="startEditSubtask(subtask)"
                             >
                               {{ subtask.title }}
@@ -818,7 +953,7 @@ const displaySubtasks = computed(() => {
             <div class="p-6 space-y-5 overflow-y-auto">
                 <!-- Title -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('modal_title') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('modal_title') }}</label>
                     <input 
                         v-model="form.title" 
                         type="text" 
@@ -830,7 +965,7 @@ const displaySubtasks = computed(() => {
                 
                 <!-- Description -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('description') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('description') }}</label>
                     <textarea 
                         v-model="form.description" 
                         class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 text-slate-800 dark:text-white placeholder-slate-400 resize-none h-24 transition-shadow" 
@@ -841,11 +976,11 @@ const displaySubtasks = computed(() => {
                 <!-- Metadata Row -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('priority') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('priority') }}</label>
                          <BaseSelect v-model="form.priority" :options="priorityOptions" class="w-full" />
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('due_date') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('due_date') }}</label>
                          <VueDatePicker
                             :model-value="parseLocalDateTime(form.due_date)"
                             @update:model-value="updateDueDate"
@@ -865,7 +1000,7 @@ const displaySubtasks = computed(() => {
                 <!-- Remind & Repeat -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('remind_at') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('remind_at') }}</label>
                          <VueDatePicker
                             :model-value="parseLocalDateTime(form.remind_at)"
                             @update:model-value="updateRemindAt"
@@ -881,7 +1016,7 @@ const displaySubtasks = computed(() => {
                          />
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('repeat') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('repeat') }}</label>
                          <BaseSelect v-model="form.repeat" :options="repeatOptions" class="w-full" />
                     </div>
                 </div>
@@ -889,11 +1024,11 @@ const displaySubtasks = computed(() => {
                 <!-- Project & Tags -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('project') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('project') }}</label>
                          <BaseSelect v-model="form.project_id" :options="projectOptions" class="w-full" />
                     </div>
                     <div>
-                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('tags_label') }}</label>
+                         <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('tags_label') }}</label>
                          <input 
                             v-model="form.tags" 
                             type="text" 
@@ -905,7 +1040,7 @@ const displaySubtasks = computed(() => {
 
                 <!-- Subtasks -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{{ t('subtasks') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{{ t('subtasks') }}</label>
                     <div class="space-y-2 mb-3" v-if="displaySubtasks.length > 0">
                       <div 
                         v-for="subtask in displaySubtasks" 
@@ -914,7 +1049,7 @@ const displaySubtasks = computed(() => {
                       >
                         <button 
                           @click="toggleSubtask(subtask)"
-                          class="text-slate-400 hover:text-primary-500 transition-colors"
+                          class="text-slate-400 dark:text-slate-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
                           :disabled="subtask.isTemp"
                           :class="{ 'cursor-default': subtask.isTemp }"
                         >
@@ -933,12 +1068,12 @@ const displaySubtasks = computed(() => {
                         <span 
                           v-else
                           class="flex-1 text-sm text-slate-700 dark:text-slate-300"
-                          :class="{ 'line-through text-slate-400': subtask.completed }"
+                          :class="{ 'line-through text-slate-400 dark:text-slate-600': subtask.completed }"
                           @dblclick="startEditSubtask(subtask)"
                         >
                           {{ subtask.title }}
                         </span>
-                        <button @click="deleteSubtask(subtask.id, subtask.isTemp)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity">
+                        <button @click="deleteSubtask(subtask.id, subtask.isTemp)" class="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-opacity">
                           <PhX size="16" />
                         </button>
                       </div>
@@ -947,7 +1082,7 @@ const displaySubtasks = computed(() => {
                     <!-- Add Subtask Input -->
                     <div class="flex items-center gap-3 mt-2">
                       <div class="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                        <PhPlus class="text-slate-400" size="16" />
+                        <PhPlus class="text-slate-400 dark:text-slate-500" size="16" />
                       </div>
                       <div class="flex-1 relative">
                         <input 
@@ -998,7 +1133,7 @@ const displaySubtasks = computed(() => {
             </div>
             <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('name') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('name') }}</label>
                     <input 
                         v-model="projectForm.name" 
                         type="text" 
@@ -1007,7 +1142,7 @@ const displaySubtasks = computed(() => {
                     />
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{{ t('color') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{{ t('color') }}</label>
                     <div class="flex gap-2 flex-wrap">
                       <button 
                         v-for="color in ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#64748B']"

@@ -59,6 +59,13 @@ func NewServer(port string) *Server {
 	mux.HandleFunc("PUT /api/subtasks/{id}", UpdateSubtaskHandler)
 	mux.HandleFunc("DELETE /api/subtasks/{id}", DeleteSubtaskHandler)
 
+	mux.HandleFunc("GET /api/trash/todos", TrashTodosHandler)
+	mux.HandleFunc("GET /api/trash/projects", TrashProjectsHandler)
+	mux.HandleFunc("POST /api/trash/todos/{id}/restore", RestoreTodoHandler)
+	mux.HandleFunc("POST /api/trash/projects/{id}/restore", RestoreProjectHandler)
+	mux.HandleFunc("DELETE /api/trash/todos/{id}", PurgeTodoHandler)
+	mux.HandleFunc("DELETE /api/trash/projects/{id}", PurgeProjectHandler)
+
 	return &Server{
 		srv: &http.Server{
 			Addr:    ":" + port,

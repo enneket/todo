@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue'
 import type { Todo } from '../stores/todo'
 
-export type ViewType = 'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project' | 'calendar' | 'statistics' | 'tag'
+export type ViewType = 'all' | 'inbox' | 'today' | 'upcoming' | 'overdue' | 'project' | 'calendar' | 'statistics' | 'trash' | 'tag'
 export type SortOption = 'created_desc' | 'due_asc' | 'due_desc' | 'priority_desc'
 export type FilterType = 'all' | 'active' | 'completed'
 

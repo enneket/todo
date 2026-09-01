@@ -27,10 +27,12 @@ export interface Todo {
   project_id: number | null
   subtasks: Subtask[]
   created_at: string
+  deleted_at: string | null
 }
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([])
+  const trashTodos = ref<Todo[]>([])
   const lastError = ref<string | null>(null)
 
   const uniqueTags = computed(() => {
@@ -48,6 +50,7 @@ export const useTodoStore = defineStore('todo', () => {
   // Assume API is running on localhost:8081 (from main.go)
   const API_URL = 'http://localhost:8081/api/todos'
   const SUBTASK_API_URL = 'http://localhost:8081/api/subtasks'
+  const TRASH_API_URL = 'http://localhost:8081/api/trash/todos'
 
   // Wrap a promise so any rejection is recorded on `lastError` instead of
   // swallowed into the console — the UI can react and show a toast.
@@ -109,8 +112,15 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   const updateTodo = async (id: number, updates: Partial<Todo>) => {
+    // The form sends '' for cleared date fields, but the backend expects a
+    // `*time.Time` (null clears it). Leave the value untouched when it's
+    // absent so a partial update doesn't wipe a field the caller didn't
+    // intend to change.
     if (updates.due_date === '') {
       updates.due_date = null
+    }
+    if (updates.remind_at === '') {
+      updates.remind_at = null
     }
     const response = await tracked(
       'updateTodo',
@@ -130,6 +140,23 @@ export const useTodoStore = defineStore('todo', () => {
     const ok = await tracked('deleteTodo', axios.delete(`${API_URL}/${id}`))
     if (ok === null) return
     todos.value = todos.value.filter(t => t.id !== id)
+  }
+
+  const fetchTrashTodos = async () => {
+    const result = await tracked('fetchTrashTodos', axios.get<Todo[]>(TRASH_API_URL))
+    if (result) trashTodos.value = result.data || []
+  }
+
+  const restoreTrashTodo = async (id: number) => {
+    const ok = await tracked('restoreTrashTodo', axios.post(`${TRASH_API_URL}/${id}/restore`))
+    if (ok === null) return
+    trashTodos.value = trashTodos.value.filter(t => t.id !== id)
+  }
+
+  const purgeTrashTodo = async (id: number) => {
+    const ok = await tracked('purgeTrashTodo', axios.delete(`${TRASH_API_URL}/${id}`))
+    if (ok === null) return
+    trashTodos.value = trashTodos.value.filter(t => t.id !== id)
   }
 
   const addSubtask = async (todoId: number, title: string) => {
@@ -176,6 +203,7 @@ export const useTodoStore = defineStore('todo', () => {
 
   return {
     todos,
+    trashTodos,
     uniqueTags,
     lastError,
     clearError,
@@ -186,5 +214,8 @@ export const useTodoStore = defineStore('todo', () => {
     addSubtask,
     updateSubtask,
     deleteSubtask,
+    fetchTrashTodos,
+    restoreTrashTodo,
+    purgeTrashTodo,
   }
 })

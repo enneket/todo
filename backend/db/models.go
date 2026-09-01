@@ -3,11 +3,12 @@ package db
 import "time"
 
 type Project struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Color       string    `json:"color"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Color       string     `json:"color"`
+	CreatedAt   time.Time  `json:"created_at"`
+	DeletedAt   *time.Time `json:"deleted_at"` // Soft delete: non-nil means the project is in the trash
 }
 
 type Subtask struct {
@@ -30,6 +31,7 @@ type Todo struct {
 	Repeat      string    `json:"repeat"`
 	Tags        []string  `json:"tags"`
 	ProjectID   *int      `json:"project_id"` // Nullable
-	Subtasks    []Subtask `json:"subtasks"` // Always serialize (no omitempty — empty slice must round-trip as `[]`)
-	CreatedAt   time.Time `json:"created_at"`
+	Subtasks    []Subtask  `json:"subtasks"`  // Always serialize (no omitempty — empty slice must round-trip as `[]`)
+	CreatedAt   time.Time  `json:"created_at"`
+	DeletedAt   *time.Time `json:"deleted_at"` // Soft delete: non-nil means the todo is in the trash
 }

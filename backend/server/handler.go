@@ -10,7 +10,8 @@ import (
 )
 
 func GetTodosHandler(w http.ResponseWriter, r *http.Request) {
-	todos, err := service.GetTodos()
+	// Optional ?q= narrows the list server-side; an empty value lists all.
+	todos, err := service.GetTodos(r.URL.Query().Get("q"))
 	if err != nil {
 		log.Printf("GetTodos failed: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)

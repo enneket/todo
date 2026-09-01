@@ -8,11 +8,14 @@ export interface Project {
   description: string
   color: string
   created_at: string
+  deleted_at: string | null
 }
 
 export const useProjectStore = defineStore('project', () => {
   const projects = ref<Project[]>([])
+  const trashProjects = ref<Project[]>([])
   const API_URL = 'http://localhost:8081/api/projects'
+  const TRASH_API_URL = 'http://localhost:8081/api/trash/projects'
 
   const fetchProjects = async () => {
     try {
@@ -50,5 +53,32 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
-  return { projects, fetchProjects, addProject, updateProject, deleteProject }
+  const fetchTrashProjects = async () => {
+    try {
+      const response = await axios.get<Project[]>(TRASH_API_URL)
+      trashProjects.value = response.data || []
+    } catch (error) {
+      console.error('Failed to fetch trashed projects:', error)
+    }
+  }
+
+  const restoreTrashProject = async (id: number) => {
+    try {
+      await axios.post(`${TRASH_API_URL}/${id}/restore`)
+      trashProjects.value = trashProjects.value.filter(p => p.id !== id)
+    } catch (error) {
+      console.error('Failed to restore project:', error)
+    }
+  }
+
+  const purgeTrashProject = async (id: number) => {
+    try {
+      await axios.delete(`${TRASH_API_URL}/${id}`)
+      trashProjects.value = trashProjects.value.filter(p => p.id !== id)
+    } catch (error) {
+      console.error('Failed to purge project:', error)
+    }
+  }
+
+  return { projects, trashProjects, fetchProjects, addProject, updateProject, deleteProject, fetchTrashProjects, restoreTrashProject, purgeTrashProject }
 })

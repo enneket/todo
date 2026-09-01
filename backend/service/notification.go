@@ -51,7 +51,7 @@ func checkReminders() {
 
 	// Only pick tasks that haven't been notified yet. Mark as notified right after
 	// dispatching so a stuck window won't re-deliver the same reminder every minute.
-	rows, err := db.DB.Query("SELECT id, title, description FROM todos WHERE completed = false AND remind_at >= ? AND remind_at < ? AND notified_at IS NULL", start, end)
+	rows, err := db.DB.Query("SELECT id, title, description FROM todos WHERE completed = false AND remind_at >= ? AND remind_at < ? AND notified_at IS NULL AND deleted_at IS NULL", start, end)
 	if err != nil {
 		log.Println("Error checking reminders:", err)
 		return

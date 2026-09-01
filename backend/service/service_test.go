@@ -15,7 +15,7 @@ func setupTestDB(t *testing.T) {
 	// in modernc.org/sqlite gets its own private :memory: database, and
 	// CREATE TABLE / SELECT land on different connections at random.
 	var err error
-	db.DB, err = sql.Open("sqlite", "file::memory:?cache=shared")
+	db.DB, err = sql.Open("sqlite", "file::memory:?cache=shared&_pragma=foreign_keys(ON)")
 	if err != nil {
 		t.Fatalf("Failed to open in-memory database: %v", err)
 	}
@@ -33,7 +33,8 @@ func setupTestDB(t *testing.T) {
 		repeat TEXT DEFAULT '',
 		tags TEXT DEFAULT '[]',
 		project_id INTEGER,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		deleted_at DATETIME
 	);`
 	if _, err := db.DB.Exec(createTableSQL); err != nil {
 		t.Fatalf("Failed to create todos table: %v", err)
@@ -44,7 +45,8 @@ func setupTestDB(t *testing.T) {
 		name TEXT NOT NULL,
 		description TEXT DEFAULT '',
 		color TEXT DEFAULT '#64748B',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		deleted_at DATETIME
 	);`
 	if _, err := db.DB.Exec(createProjectsTableSQL); err != nil {
 		t.Fatalf("Failed to create projects table: %v", err)
@@ -134,7 +136,7 @@ func TestTodoService(t *testing.T) {
 	}
 
 	// Test GetTodos
-	todos, err := GetTodos()
+	todos, err := GetTodos("")
 	if err != nil {
 		t.Fatalf("GetTodos failed: %v", err)
 	}
@@ -153,7 +155,7 @@ func TestTodoService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateTodoStatus failed: %v", err)
 	}
-	todos, _ = GetTodos()
+	todos, _ = GetTodos("")
 	if !todos[0].Completed {
 		t.Error("Expected todo to be completed")
 	}
@@ -172,7 +174,7 @@ func TestTodoService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateTodoDetails failed: %v", err)
 	}
-	todos, _ = GetTodos()
+	todos, _ = GetTodos("")
 	if todos[0].Title != "Buy Almond Milk" {
 		t.Errorf("Expected updated title 'Buy Almond Milk', got '%s'", todos[0].Title)
 	}
@@ -188,7 +190,7 @@ func TestTodoService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeleteTodo failed: %v", err)
 	}
-	todos, _ = GetTodos()
+	todos, _ = GetTodos("")
 	if len(todos) != 0 {
 		t.Errorf("Expected 0 todos after delete, got %d", len(todos))
 	}
@@ -216,7 +218,7 @@ func TestTodoRepeat(t *testing.T) {
 		t.Fatalf("UpdateTodoStatus failed: %v", err)
 	}
 
-	todos, err := GetTodos()
+	todos, err := GetTodos("")
 	// Should have 2 todos now: one completed (original), one pending (new)
 	if len(todos) != 2 {
 		t.Fatalf("Expected 2 todos, got %d", len(todos))
@@ -341,7 +343,7 @@ func TestGetTodosBatchedSubtasks(t *testing.T) {
 	CreateSubtask(int(todo3), "3.b")
 	CreateSubtask(int(todo3), "3.c")
 
-	todos, err := GetTodos()
+	todos, err := GetTodos("")
 	if err != nil {
 		t.Fatalf("GetTodos failed: %v", err)
 	}
@@ -365,6 +367,62 @@ func TestGetTodosBatchedSubtasks(t *testing.T) {
 	}
 	if counts[int(todo3)] != 3 {
 		t.Errorf("todo3 expected 3 subtasks, got %d (titles=%v)", counts[int(todo3)], titles[int(todo3)])
+	}
+}
+
+// todoTitles extracts titles so search failures can print what actually came
+// back instead of whole todo structs.
+func todoTitles(todos []db.Todo) []string {
+	titles := make([]string, len(todos))
+	for i, td := range todos {
+		titles[i] = td.Title
+	}
+	return titles
+}
+
+func TestGetTodosSearch(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	CreateTodo(CreateTodoParams{Title: "Buy Milk", Description: "groceries for breakfast", Tags: []string{"shopping"}})
+	CreateTodo(CreateTodoParams{Title: "Write report", Description: "quarterly numbers", Tags: []string{"work"}})
+	trashID, _ := CreateTodo(CreateTodoParams{Title: "Milk the cows"})
+	if err := DeleteTodo(int(trashID)); err != nil {
+		t.Fatalf("DeleteTodo failed: %v", err)
+	}
+
+	// Title match, ASCII case-insensitive; the trashed todo stays hidden.
+	todos, err := GetTodos("MILK")
+	if err != nil {
+		t.Fatalf("GetTodos failed: %v", err)
+	}
+	if len(todos) != 1 || todos[0].Title != "Buy Milk" {
+		t.Errorf("Expected only 'Buy Milk' for q=MILK, got %v", todoTitles(todos))
+	}
+
+	// Description match.
+	todos, _ = GetTodos("quarterly")
+	if len(todos) != 1 || todos[0].Title != "Write report" {
+		t.Errorf("Expected 'Write report' via description match, got %v", todoTitles(todos))
+	}
+
+	// Tag match.
+	todos, _ = GetTodos("shopping")
+	if len(todos) != 1 || todos[0].Title != "Buy Milk" {
+		t.Errorf("Expected 'Buy Milk' via tag match, got %v", todoTitles(todos))
+	}
+
+	// LIKE wildcards in the query must be treated as literal characters.
+	CreateTodo(CreateTodoParams{Title: "Save 50%_now"})
+	todos, _ = GetTodos(`50%_`)
+	if len(todos) != 1 || todos[0].Title != "Save 50%_now" {
+		t.Errorf("Expected literal '50%%_' match, got %v", todoTitles(todos))
+	}
+
+	// Blank / whitespace-only query behaves like no filter.
+	todos, _ = GetTodos("   ")
+	if len(todos) != 3 {
+		t.Errorf("Expected all 3 todos for blank query, got %d (%v)", len(todos), todoTitles(todos))
 	}
 }
 
@@ -392,7 +450,7 @@ func TestTodoPartialUpdate(t *testing.T) {
 		t.Fatalf("UpdateTodoDetails failed: %v", err)
 	}
 
-	todos, _ := GetTodos()
+	todos, _ := GetTodos("")
 	if len(todos) != 1 {
 		t.Fatalf("Expected 1 todo, got %d", len(todos))
 	}
@@ -445,7 +503,7 @@ func TestNotificationDedup(t *testing.T) {
 
 	// First scan: should mark notified_at.
 	checkReminders()
-	todos, _ := GetTodos()
+	todos, _ := GetTodos("")
 	if len(todos) != 1 {
 		t.Fatalf("Expected 1 todo, got %d", len(todos))
 	}
@@ -458,7 +516,7 @@ func TestNotificationDedup(t *testing.T) {
 	// should stay unchanged even if the window keeps sliding.
 	time.Sleep(20 * time.Millisecond)
 	checkReminders()
-	todos, _ = GetTodos()
+	todos, _ = GetTodos("")
 	if todos[0].NotifiedAt == nil || !todos[0].NotifiedAt.Equal(firstNotified) {
 		t.Errorf("notified_at should not be overwritten by a subsequent scan; got %v want %v", todos[0].NotifiedAt, firstNotified)
 	}
@@ -467,8 +525,245 @@ func TestNotificationDedup(t *testing.T) {
 	if err := UpdateTodoDetails(int(id), UpdateTodoParams{RemindAt: &remindAt}); err != nil {
 		t.Fatalf("UpdateTodoDetails failed: %v", err)
 	}
-	todos, _ = GetTodos()
+	todos, _ = GetTodos("")
 	if todos[0].NotifiedAt != nil {
 		t.Errorf("Expected notified_at to be reset to NULL after UpdateTodoDetails, got %v", todos[0].NotifiedAt)
+	}
+}
+
+func TestTrashTodoLifecycle(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	id, err := CreateTodo(CreateTodoParams{Title: "Doomed"})
+	if err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// Soft delete moves the todo from the normal list to the trash.
+	if err := DeleteTodo(int(id)); err != nil {
+		t.Fatalf("DeleteTodo failed: %v", err)
+	}
+	todos, _ := GetTodos("")
+	if len(todos) != 0 {
+		t.Errorf("Expected 0 todos after soft delete, got %d", len(todos))
+	}
+	trashed, err := GetTrashedTodos()
+	if err != nil {
+		t.Fatalf("GetTrashedTodos failed: %v", err)
+	}
+	if len(trashed) != 1 || trashed[0].ID != int(id) {
+		t.Fatalf("Expected 1 trashed todo (id=%d), got %v", id, trashed)
+	}
+	if trashed[0].DeletedAt == nil {
+		t.Error("Expected trashed todo to carry a deleted_at timestamp")
+	}
+
+	// Restore brings it back; the trash empties.
+	if err := RestoreTodo(int(id)); err != nil {
+		t.Fatalf("RestoreTodo failed: %v", err)
+	}
+	todos, _ = GetTodos("")
+	if len(todos) != 1 || todos[0].ID != int(id) {
+		t.Errorf("Expected the todo back in the normal list, got %v", todos)
+	}
+	trashed, _ = GetTrashedTodos()
+	if len(trashed) != 0 {
+		t.Errorf("Expected empty trash after restore, got %d", len(trashed))
+	}
+}
+
+func TestTrashProjectCascade(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	projID, _ := CreateProject("Doomed Project", "", "")
+	projIDInt := int(projID)
+	todoID, _ := CreateTodo(CreateTodoParams{Title: "Under project", ProjectID: &projIDInt})
+
+	// Deleting the project takes its todos into the trash with it.
+	if err := DeleteProject(projIDInt); err != nil {
+		t.Fatalf("DeleteProject failed: %v", err)
+	}
+	projects, _ := GetProjects()
+	if len(projects) != 0 {
+		t.Errorf("Expected 0 projects after soft delete, got %d", len(projects))
+	}
+	todos, _ := GetTodos("")
+	if len(todos) != 0 {
+		t.Errorf("Expected 0 todos after project soft delete, got %d", len(todos))
+	}
+	trashedProjects, err := GetTrashedProjects()
+	if err != nil {
+		t.Fatalf("GetTrashedProjects failed: %v", err)
+	}
+	if len(trashedProjects) != 1 || trashedProjects[0].ID != projIDInt {
+		t.Fatalf("Expected 1 trashed project, got %v", trashedProjects)
+	}
+	trashedTodos, err := GetTrashedTodos()
+	if err != nil {
+		t.Fatalf("GetTrashedTodos failed: %v", err)
+	}
+	if len(trashedTodos) != 1 || trashedTodos[0].ID != int(todoID) {
+		t.Fatalf("Expected 1 trashed todo, got %v", trashedTodos)
+	}
+	// Shared deletion timestamp keeps the group consistent.
+	if !trashedProjects[0].DeletedAt.Equal(*trashedTodos[0].DeletedAt) {
+		t.Error("Expected project and todo to share the same deleted_at timestamp")
+	}
+
+	// Restoring the project leaves its todos in the trash — each item keeps
+	// its own deleted_at and is restored individually (RestoreTodo).
+	if err := RestoreProject(projIDInt); err != nil {
+		t.Fatalf("RestoreProject failed: %v", err)
+	}
+	projects, _ = GetProjects()
+	if len(projects) != 1 || projects[0].ID != projIDInt {
+		t.Errorf("Expected the project back in the normal list, got %v", projects)
+	}
+	todos, _ = GetTodos("")
+	if len(todos) != 0 {
+		t.Errorf("Expected todos to stay in the trash after project restore, got %d todos", len(todos))
+	}
+	trashedProjects, _ = GetTrashedProjects()
+	trashedTodos, _ = GetTrashedTodos()
+	if len(trashedProjects) != 0 {
+		t.Errorf("Expected empty project trash after restore, got %d", len(trashedProjects))
+	}
+	if len(trashedTodos) != 1 || trashedTodos[0].ID != int(todoID) {
+		t.Errorf("Expected the todo still in the trash after project restore, got %v", trashedTodos)
+	}
+
+	// Restoring the todo then brings it back; the project is already active
+	// so no cascade is triggered.
+	if err := RestoreTodo(int(todoID)); err != nil {
+		t.Fatalf("RestoreTodo failed: %v", err)
+	}
+	todos, _ = GetTodos("")
+	if len(todos) != 1 || todos[0].ID != int(todoID) {
+		t.Errorf("Expected the todo back in the normal list, got %v", todos)
+	}
+	trashedTodos, _ = GetTrashedTodos()
+	if len(trashedTodos) != 0 {
+		t.Errorf("Expected empty todo trash after restore, got %d", len(trashedTodos))
+	}
+}
+
+func TestRestoreTodoRestoresProject(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	projID, _ := CreateProject("Grouped", "", "")
+	projIDInt := int(projID)
+	todoID, _ := CreateTodo(CreateTodoParams{Title: "Member", ProjectID: &projIDInt})
+
+	if err := DeleteProject(projIDInt); err != nil {
+		t.Fatalf("DeleteProject failed: %v", err)
+	}
+
+	// Restoring the todo must pull its trashed project back too, so no todo
+	// ever points at a deleted project.
+	if err := RestoreTodo(int(todoID)); err != nil {
+		t.Fatalf("RestoreTodo failed: %v", err)
+	}
+	projects, _ := GetProjects()
+	todos, _ := GetTodos("")
+	if len(projects) != 1 || projects[0].ID != projIDInt {
+		t.Errorf("Expected project restored along with its todo, got %v", projects)
+	}
+	if len(todos) != 1 || todos[0].ID != int(todoID) {
+		t.Errorf("Expected todo restored, got %v", todos)
+	}
+}
+
+func TestPurgeTodoCascadesSubtasks(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	id, _ := CreateTodo(CreateTodoParams{Title: "Purge me"})
+	subtaskID, _ := CreateSubtask(int(id), "child")
+
+	if err := DeleteTodo(int(id)); err != nil {
+		t.Fatalf("DeleteTodo failed: %v", err)
+	}
+	if err := PurgeTodo(int(id)); err != nil {
+		t.Fatalf("PurgeTodo failed: %v", err)
+	}
+
+	trashed, _ := GetTrashedTodos()
+	if len(trashed) != 0 {
+		t.Errorf("Expected empty trash after purge, got %d", len(trashed))
+	}
+	// The todo row and its subtasks are physically gone.
+	var count int
+	if err := db.DB.QueryRow("SELECT COUNT(*) FROM todos WHERE id = ?", id).Scan(&count); err != nil || count != 0 {
+		t.Errorf("Expected todo row physically deleted, count=%d err=%v", count, err)
+	}
+	if err := db.DB.QueryRow("SELECT COUNT(*) FROM subtasks WHERE id = ?", subtaskID).Scan(&count); err != nil || count != 0 {
+		t.Errorf("Expected subtask cascade-deleted, count=%d err=%v", count, err)
+	}
+}
+
+func TestPurgeProjectCascadesTodos(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	projID, _ := CreateProject("Purge project", "", "")
+	projIDInt := int(projID)
+	todoID, _ := CreateTodo(CreateTodoParams{Title: "Inside", ProjectID: &projIDInt})
+
+	if err := DeleteProject(projIDInt); err != nil {
+		t.Fatalf("DeleteProject failed: %v", err)
+	}
+	if err := PurgeProject(projIDInt); err != nil {
+		t.Fatalf("PurgeProject failed: %v", err)
+	}
+
+	trashedProjects, _ := GetTrashedProjects()
+	trashedTodos, _ := GetTrashedTodos()
+	if len(trashedProjects) != 0 || len(trashedTodos) != 0 {
+		t.Errorf("Expected empty trash after purge, got %d projects, %d todos", len(trashedProjects), len(trashedTodos))
+	}
+	var count int
+	if err := db.DB.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ?", projID).Scan(&count); err != nil || count != 0 {
+		t.Errorf("Expected project row physically deleted, count=%d err=%v", count, err)
+	}
+	if err := db.DB.QueryRow("SELECT COUNT(*) FROM todos WHERE id = ?", todoID).Scan(&count); err != nil || count != 0 {
+		t.Errorf("Expected todo row physically deleted, count=%d err=%v", count, err)
+	}
+}
+
+func TestNotificationSkipsTrashed(t *testing.T) {
+	setupTestDB(t)
+	defer db.DB.Close()
+
+	// Stub out the actual desktop-notification dispatch (same as
+	// TestNotificationDedup) so the scan does not block on dbus.
+	origNotify := sendNotification
+	sendNotification = func(title, description string) error { return nil }
+	defer func() { sendNotification = origNotify }()
+
+	remindAt := time.Now().UTC().Add(10 * time.Second)
+	id, err := CreateTodo(CreateTodoParams{
+		Title:    "Ghost reminder",
+		Priority: "high",
+		RemindAt: &remindAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateTodo failed: %v", err)
+	}
+
+	// A trashed todo must never fire a reminder.
+	if err := DeleteTodo(int(id)); err != nil {
+		t.Fatalf("DeleteTodo failed: %v", err)
+	}
+	checkReminders()
+
+	var notifiedAt *time.Time
+	if err := db.DB.QueryRow("SELECT notified_at FROM todos WHERE id = ?", id).Scan(&notifiedAt); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if notifiedAt != nil {
+		t.Error("Expected trashed todo to be skipped by the reminder scan, got notified_at set")
 	}
 }

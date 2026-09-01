@@ -58,5 +58,14 @@
   "sort_priority": "优先级",
   "ascending": "升序",
   "descending": "降序",
-  "no_tags": "暂无标签"
+  "no_tags": "暂无标签",
+  "trash": "回收站",
+  "restore": "恢复",
+  "purge": "彻底删除",
+  "deleted_at": "删除时间",
+  "deleted_tasks": "已删除的任务",
+  "deleted_projects": "已删除的项目",
+  "trash_empty": "回收站是空的",
+  "confirm_purge_todo": "确定要彻底删除该任务吗？此操作不可撤销。",
+  "confirm_purge_project": "确定要彻底删除该项目及其所有任务吗？此操作不可撤销。"
 }
