@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2026-09-01
+
+### Added
+
+#### ✨ Features
+- **Search**: Server-side full-text search over titles, descriptions, and tags via `GET /api/todos?q=keyword` (case-insensitive literal substring matching, backed by SQLite `LIKE`).
+- **Trash**: Soft-delete todos and projects, then restore or permanently purge from a dedicated Trash view in the sidebar. Deleting a project cascades soft-delete to its todos in a single transaction; restoring is independent per item.
+
+#### 🎨 UI/UX
+- **Theme**: Theme store now validates persisted values, exposes a reactive `isDark` for JS-styled surfaces (Chart.js), and tracks OS-level preference changes live.
+- **Statistics**: Statistics panel charts now follow the active theme.
+
+### Changed
+
+#### 🔧 Refactoring
+- **Backend**: `DeleteProject` is now a transactional cascade soft-delete; `GetTodos` accepts an optional `q` query for server-side search.
+- **Frontend**: Added explicit dark-mode classes throughout components for consistency.
+
+#### 📦 Assets
+- **Icons**: Optimized `build/appicon.png` (≈84% smaller) and `build/windows/icon.ico`.
+
+#### 📚 Documentation
+- **API**: Documented search and the new trash endpoints in `docs/API_DOCUMENTATION.md`.
+
 ## [0.1.5] - 2026-08-31
 
 ### Added
