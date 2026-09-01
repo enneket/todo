@@ -29,6 +29,7 @@ describe('useTodoFilter', () => {
     project_id: null,
     subtasks: [],
     created_at: new Date().toISOString(),
+    deleted_at: null,
     ...overrides
   })
 

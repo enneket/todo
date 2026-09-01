@@ -174,7 +174,7 @@ const getPriorityColor = (priority: string) => {
       <div 
         v-for="day in weekDays" 
         :key="day"
-        class="py-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider"
+        class="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
       >
         {{ day }}
       </div>

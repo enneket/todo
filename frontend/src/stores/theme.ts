@@ -1,13 +1,22 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 export type Theme = 'light' | 'dark' | 'auto'
 
 export const useThemeStore = defineStore('theme', () => {
-  const theme = ref<Theme>((localStorage.getItem('theme') as Theme) || 'auto')
+  // Validate the persisted value so corrupted entries fall back to 'auto'.
+  const storedTheme = localStorage.getItem('theme')
+  const theme = ref<Theme>(
+    storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'auto'
+      ? storedTheme
+      : 'auto'
+  )
 
-  const updateDocumentClass = (isDark: boolean) => {
-    if (isDark) {
+  // Reactive system preference so `isDark` tracks OS-level changes.
+  const systemDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  const updateDocumentClass = (dark: boolean) => {
+    if (dark) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
@@ -16,8 +25,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   const applyTheme = () => {
     if (theme.value === 'auto') {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      updateDocumentClass(systemDark)
+      updateDocumentClass(systemDark.value)
     } else {
       updateDocumentClass(theme.value === 'dark')
     }
@@ -31,6 +39,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Listen for system preference changes
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    systemDark.value = e.matches
     if (theme.value === 'auto') {
       updateDocumentClass(e.matches)
     }
@@ -38,6 +47,9 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Initial application
   applyTheme()
+
+  // Reactive dark-state for JS-styled surfaces (e.g. chart.js colors).
+  const isDark = computed(() => (theme.value === 'auto' ? systemDark.value : theme.value === 'dark'))
 
   const toggleTheme = () => {
     if (theme.value === 'light') theme.value = 'dark'
@@ -47,6 +59,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   return {
     theme,
+    isDark,
     toggleTheme,
     applyTheme
   }

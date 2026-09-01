@@ -56,7 +56,7 @@ const getLabel = (val: string | number) => {
       class="inline-flex w-full justify-between items-center gap-x-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-white shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors h-[42px] focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900"
     >
       {{ getLabel(modelValue) }}
-      <PhCaretDown class="-mr-1 h-4 w-4 text-slate-400" aria-hidden="true" />
+      <PhCaretDown class="-mr-1 h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden="true" />
     </button>
 
     <transition

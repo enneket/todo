@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTodoStore } from '../stores/todo'
+import { useThemeStore } from '../stores/theme'
 import { Doughnut, Bar } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js'
 import { PhChartPie, PhCheckCircle, PhListBullets, PhTrendUp } from '@phosphor-icons/vue'
@@ -10,6 +11,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 const { t } = useI18n()
 const todoStore = useTodoStore()
+const themeStore = useThemeStore()
 
 // --- Stats Logic ---
 
@@ -30,7 +32,7 @@ const doughnutData = computed(() => ({
   ]
 }))
 
-const doughnutOptions = {
+const doughnutOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -38,11 +40,12 @@ const doughnutOptions = {
       position: 'bottom' as const,
       labels: {
           usePointStyle: true,
+          color: themeStore.isDark ? '#CBD5E1' : '#475569',
           font: { family: 'Archivo' }
       }
     }
   }
-}
+}))
 
 // Priority Distribution Bar Chart
 const barData = computed(() => {
@@ -60,17 +63,21 @@ const barData = computed(() => {
     }
 })
 
-const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false }
-    },
-    scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-        x: { grid: { display: false } }
+const barOptions = computed(() => {
+    const tickColor = themeStore.isDark ? '#94A3B8' : '#64748B'
+    const gridColor = themeStore.isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(100, 116, 139, 0.1)'
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
+            x: { ticks: { color: tickColor }, grid: { display: false } }
+        }
     }
-}
+})
 
 </script>
 
@@ -84,17 +91,17 @@ const barOptions = {
     <!-- KPI Cards -->
     <div class="grid grid-cols-3 gap-4 mb-8">
         <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 text-center">
-            <div class="text-blue-500 mb-1 flex justify-center"><PhListBullets size="24" weight="duotone"/></div>
+            <div class="text-blue-500 dark:text-blue-400 mb-1 flex justify-center"><PhListBullets size="24" weight="duotone"/></div>
             <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ totalTodos }}</div>
             <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{{ t('total') }}</div>
         </div>
         <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 text-center">
-            <div class="text-emerald-500 mb-1 flex justify-center"><PhCheckCircle size="24" weight="duotone"/></div>
+            <div class="text-emerald-500 dark:text-emerald-400 mb-1 flex justify-center"><PhCheckCircle size="24" weight="duotone"/></div>
             <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ completedTodos }}</div>
             <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{{ t('completed') }}</div>
         </div>
         <div class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 text-center">
-            <div class="text-indigo-500 mb-1 flex justify-center"><PhTrendUp size="24" weight="duotone"/></div>
+            <div class="text-indigo-500 dark:text-indigo-400 mb-1 flex justify-center"><PhTrendUp size="24" weight="duotone"/></div>
             <div class="text-2xl font-bold text-slate-800 dark:text-white">{{ completionRate }}%</div>
             <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{{ t('rate') }}</div>
         </div>
