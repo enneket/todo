@@ -69,16 +69,19 @@ jobs:
             echo "This is a stable release version: $VERSION"
           fi
 
-      - name: Check if tag exists
+      - name: Check if tag exists on remote
         id: check_tag
         run: |
-          git fetch --tags
-          if git rev-parse ${{ steps.get_version.outputs.tag }} >/dev/null 2>&1; then
+          # Use `git ls-remote` to query the remote instead of `git fetch --tags`.
+          # `fetch --tags` refuses to update a local tag of the same name
+          # (would clobber existing tag) when the checkout already carries one —
+          # `ls-remote` only inspects refs and never mutates local state.
+          if git ls-remote --tags origin "refs/tags/${{ steps.get_version.outputs.tag }}" | grep -q .; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.get_version.outputs.tag }} already exists"
+            echo "Tag ${{ steps.get_version.outputs.tag }} already exists on remote"
           else
             echo "tag_exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.get_version.outputs.tag }} does not exist"
+            echo "Tag ${{ steps.get_version.outputs.tag }} does not exist on remote"
           fi
 
       - name: Create Git tag
