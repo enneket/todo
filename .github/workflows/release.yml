@@ -201,7 +201,10 @@ jobs:
           npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version --allow-same-version
 
       # 同步 wails.json 的 version 字段，否则 Windows / macOS 二进制嵌入的产品版本会停留在旧值。
+      # 必须显式声明 shell: bash —— build-release job 是三平台矩阵，Windows runner 默认 pwsh 会把
+      # `VERSION="0.1.6"` 误当成 cmdlet 名执行。
       - name: Update wails.json version
+        shell: bash
         run: |
           VERSION="${{ needs.create-release.outputs.version }}"
           jq --arg v "$VERSION" '.version = $v' wails.json > wails.json.tmp && mv wails.json.tmp wails.json
